@@ -224,606 +224,680 @@
     <button id="saveBtn" class="btn btn-primary">保存して Order 画面へ</button>
   </div>
 
-  <script>
-    const INDEX_STORAGE_KEY = "orderSystemIndexV1";
-    const ORDER_PAGE_URL = "order.html?v=sync13"; // 必要に応じてバージョン文字列を変更
+ <script>
+  const INDEX_STORAGE_KEY = "orderSystemIndexV1";
+  const ORDER_PAGE_URL = "order.html?v=sync13"; // 必要に応じて修正
 
-    const FIXED_ROOMS = [
-      "やまぶき",
-      "なでしこ",
-      "つばき",
-      "やしお",
-      "さくら",
-      "ふじ",
-      "さつき",
-      "きすげ",
-      "ゆり",
-      "はぎ"
-    ];
+  const FIXED_ROOMS = [
+    "やまぶき",
+    "なでしこ",
+    "つばき",
+    "やしお",
+    "さくら",
+    "ふじ",
+    "さつき",
+    "きすげ",
+    "ゆり",
+    "はぎ"
+  ];
 
-    const PLAN_OPTIONS = [
-      { value: "standard", label: "スタンダード" },
-      { value: "wagyu", label: "和牛懐石" },
-      { value: "steak", label: "ステーキ" },
-      { value: "shabu", label: "しゃぶしゃぶ" },
-      { value: "renpaku", label: "連泊" }
-    ];
+  const PLAN_OPTIONS = [
+    { value: "standard", label: "スタンダード" },
+    { value: "wagyu", label: "和牛懐石" },
+    { value: "steak", label: "ステーキ" },
+    { value: "shabu", label: "しゃぶしゃぶ" },
+    { value: "renpaku", label: "連泊" }
+  ];
 
-    // アレルギータグで選択できるコース名
-    const ALLERGY_COURSE_LABELS = [
-      "吸物",
-      "果菜盛り",
-      "蒸物",
-      "茶碗蒸し",
-      "牛たたき",
-      "焼物",
-      "小鉢",
-      "揚物",
-      "フライ",
-      "しゃぶしゃぶ",
-      "すき焼き",
-      "ステーキ",
-      "煮物",
-      "ご飯",
-      "甘味"
-    ];
+  // 各プランごとのコース並び（ラベル）
+  const PLAN_COURSES = {
+    standard: ["吸物", "果菜盛り", "蒸物", "揚物", "煮物", "ご飯", "甘味"],
+    wagyu: ["吸物", "果菜盛り", "すき焼き", "フライ", "ステーキ", "ご飯", "甘味"],
+    steak: ["吸物", "果菜盛り", "蒸物", "揚物", "ステーキ", "ご飯", "甘味"],
+    shabu: ["吸物", "果菜盛り", "しゃぶしゃぶ", "蒸物", "揚物", "ご飯", "甘味"],
+    renpaku: ["茶碗蒸し", "牛たたき", "焼物", "小鉢", "揚物", "ご飯", "甘味"]
+  };
 
-    function getTodayKey() {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
+  // 予備：全部入り（プランが取れないときのフォールバック）
+  const ALLERGY_COURSE_LABELS = [
+    "吸物",
+    "果菜盛り",
+    "蒸物",
+    "茶碗蒸し",
+    "牛たたき",
+    "焼物",
+    "小鉢",
+    "揚物",
+    "フライ",
+    "しゃぶしゃぶ",
+    "すき焼き",
+    "ステーキ",
+    "煮物",
+    "ご飯",
+    "甘味"
+  ];
+
+  function getTodayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function loadIndexData() {
+    const raw = localStorage.getItem(INDEX_STORAGE_KEY);
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw);
+      if (!data.date || data.date !== getTodayKey()) return null;
+      return data;
+    } catch (e) {
+      console.error("loadIndexData error", e);
+      return null;
     }
+  }
 
-    function loadIndexData() {
-      const raw = localStorage.getItem(INDEX_STORAGE_KEY);
-      if (!raw) return null;
-      try {
-        const data = JSON.parse(raw);
-        if (!data.date || data.date !== getTodayKey()) return null;
-        return data;
-      } catch (e) {
-        console.error("loadIndexData error", e);
-        return null;
+  // =====================
+  // 部屋関連
+  // =====================
+  function getAllRoomNames() {
+    return Array.from(document.querySelectorAll("#roomsBody tr")).map(
+      (tr) => tr.dataset.roomName
+    );
+  }
+
+  function getPlanForRoom(roomName) {
+    if (!roomName) return null;
+    const trs = document.querySelectorAll("#roomsBody tr");
+    for (const tr of trs) {
+      if (tr.dataset.roomName === roomName) {
+        const selPlan = tr.querySelector(".room-plan");
+        return selPlan ? selPlan.value : null;
       }
     }
+    return null;
+  }
 
-    // ---- 部屋行生成 ----
-    function createRoomRow(name, isCustom, prev) {
-      const tbody = document.getElementById("roomsBody");
-      const tr = document.createElement("tr");
-      tr.dataset.roomName = name;
-      if (isCustom) tr.dataset.custom = "1";
+  function createRoomRow(name, isCustom, prev) {
+    const tbody = document.getElementById("roomsBody");
+    const tr = document.createElement("tr");
+    tr.dataset.roomName = name;
+    if (isCustom) tr.dataset.custom = "1";
 
-      // 使用
-      const tdUse = document.createElement("td");
-      const chkUse = document.createElement("input");
-      chkUse.type = "checkbox";
-      chkUse.className = "room-use";
-      chkUse.checked = prev ? !!prev.enabled : true;
-      tdUse.appendChild(chkUse);
-      tr.appendChild(tdUse);
+    // 使用
+    const tdUse = document.createElement("td");
+    const chkUse = document.createElement("input");
+    chkUse.type = "checkbox";
+    chkUse.className = "room-use";
+    chkUse.checked = prev ? !!prev.enabled : true;
+    tdUse.appendChild(chkUse);
+    tr.appendChild(tdUse);
 
-      // 部屋名
-      const tdName = document.createElement("td");
-      const spanName = document.createElement("span");
-      spanName.className = "room-name-label";
-      spanName.textContent = name;
-      tdName.appendChild(spanName);
-      tr.appendChild(tdName);
+    // 部屋名
+    const tdName = document.createElement("td");
+    const spanName = document.createElement("span");
+    spanName.className = "room-name-label";
+    spanName.textContent = name;
+    tdName.appendChild(spanName);
+    tr.appendChild(tdName);
 
-      // 人数
-      const tdPeople = document.createElement("td");
-      const selPeople = document.createElement("select");
-      selPeople.className = "room-people-select";
-      const peopleOptions = ["2名", "3名", "4名", "5名", "6名", "カスタマイズ"];
-      peopleOptions.forEach((text) => {
-        const opt = document.createElement("option");
-        opt.value = text === "カスタマイズ" ? "custom" : text;
-        opt.textContent = text;
-        selPeople.appendChild(opt);
-      });
-      const inputPeopleCustom = document.createElement("input");
-      inputPeopleCustom.type = "text";
-      inputPeopleCustom.className = "room-people-custom";
-      inputPeopleCustom.placeholder = "例：7名";
-      inputPeopleCustom.style.display = "none";
+    // 人数
+    const tdPeople = document.createElement("td");
+    const selPeople = document.createElement("select");
+    selPeople.className = "room-people-select";
+    const peopleOptions = ["2名", "3名", "4名", "5名", "6名", "カスタマイズ"];
+    peopleOptions.forEach((text) => {
+      const opt = document.createElement("option");
+      opt.value = text === "カスタマイズ" ? "custom" : text;
+      opt.textContent = text;
+      selPeople.appendChild(opt);
+    });
+    const inputPeopleCustom = document.createElement("input");
+    inputPeopleCustom.type = "text";
+    inputPeopleCustom.className = "room-people-custom";
+    inputPeopleCustom.placeholder = "例：7名";
+    inputPeopleCustom.style.display = "none";
 
-      // 既存値から反映
-      const prevPeople = prev ? prev.peopleDisplay || "" : "2名";
-      if (["2名", "3名", "4名", "5名", "6名"].includes(prevPeople)) {
-        selPeople.value = prevPeople;
-      } else if (prevPeople) {
-        selPeople.value = "custom";
-        inputPeopleCustom.value = prevPeople;
+    const prevPeople = prev ? prev.peopleDisplay || "" : "2名";
+    if (["2名", "3名", "4名", "5名", "6名"].includes(prevPeople)) {
+      selPeople.value = prevPeople;
+    } else if (prevPeople) {
+      selPeople.value = "custom";
+      inputPeopleCustom.value = prevPeople;
+      inputPeopleCustom.style.display = "inline-block";
+    } else {
+      selPeople.value = "2名";
+    }
+
+    selPeople.addEventListener("change", () => {
+      if (selPeople.value === "custom") {
         inputPeopleCustom.style.display = "inline-block";
       } else {
-        selPeople.value = "2名";
+        inputPeopleCustom.style.display = "none";
       }
+    });
 
-      selPeople.addEventListener("change", () => {
-        if (selPeople.value === "custom") {
-          inputPeopleCustom.style.display = "inline-block";
-        } else {
-          inputPeopleCustom.style.display = "none";
-        }
-      });
+    tdPeople.appendChild(selPeople);
+    tdPeople.appendChild(inputPeopleCustom);
+    tr.appendChild(tdPeople);
 
-      tdPeople.appendChild(selPeople);
-      tdPeople.appendChild(inputPeopleCustom);
-      tr.appendChild(tdPeople);
+    // 時間
+    const tdTime = document.createElement("td");
+    const selTime = document.createElement("select");
+    selTime.className = "room-time";
+    ["18:00", "18:30", "19:00"].forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      selTime.appendChild(opt);
+    });
+    selTime.value = prev && prev.time ? prev.time : "18:00";
+    tdTime.appendChild(selTime);
+    tr.appendChild(tdTime);
 
-      // 時間
-      const tdTime = document.createElement("td");
-      const selTime = document.createElement("select");
-      selTime.className = "room-time";
-      ["18:00", "18:30", "19:00"].forEach((t) => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        selTime.appendChild(opt);
-      });
-      selTime.value = prev && prev.time ? prev.time : "18:00";
-      tdTime.appendChild(selTime);
-      tr.appendChild(tdTime);
+    // プラン
+    const tdPlan = document.createElement("td");
+    const selPlan = document.createElement("select");
+    selPlan.className = "room-plan";
+    PLAN_OPTIONS.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.value;
+      opt.textContent = p.label;
+      selPlan.appendChild(opt);
+    });
+    selPlan.value = prev && prev.plan ? prev.plan : "standard";
+    tdPlan.appendChild(selPlan);
+    tr.appendChild(tdPlan);
 
-      // プラン
-      const tdPlan = document.createElement("td");
-      const selPlan = document.createElement("select");
-      selPlan.className = "room-plan";
-      PLAN_OPTIONS.forEach((p) => {
-        const opt = document.createElement("option");
-        opt.value = p.value;
-        opt.textContent = p.label;
-        selPlan.appendChild(opt);
-      });
-      selPlan.value = prev && prev.plan ? prev.plan : "standard";
-      tdPlan.appendChild(selPlan);
-      tr.appendChild(tdPlan);
+    // プランが変わったら、その部屋のアレルギータグのコース候補を更新
+    selPlan.addEventListener("change", () => {
+      updateAllergyCourseOptionsForRoom(name);
+    });
 
-      // ケーキ／プレート
-      const tdTag = document.createElement("td");
-      const labelCake = document.createElement("label");
-      labelCake.className = "inline-label";
-      const chkCake = document.createElement("input");
-      chkCake.type = "checkbox";
-      chkCake.className = "room-cake";
-      chkCake.checked = prev ? !!prev.cake : false;
-      labelCake.appendChild(chkCake);
-      labelCake.appendChild(document.createTextNode("ケーキ"));
-      tdTag.appendChild(labelCake);
+    // ケーキ／プレート
+    const tdTag = document.createElement("td");
+    const labelCake = document.createElement("label");
+    labelCake.className = "inline-label";
+    const chkCake = document.createElement("input");
+    chkCake.type = "checkbox";
+    chkCake.className = "room-cake";
+    chkCake.checked = prev ? !!prev.cake : false;
+    labelCake.appendChild(chkCake);
+    labelCake.appendChild(document.createTextNode("ケーキ"));
+    tdTag.appendChild(labelCake);
 
-      const labelPlate = document.createElement("label");
-      labelPlate.className = "inline-label";
-      const chkPlate = document.createElement("input");
-      chkPlate.type = "checkbox";
-      chkPlate.className = "room-plate";
-      chkPlate.checked = prev ? !!prev.plate : false;
-      labelPlate.appendChild(chkPlate);
-      labelPlate.appendChild(document.createTextNode("プレート"));
-      tdTag.appendChild(labelPlate);
+    const labelPlate = document.createElement("label");
+    labelPlate.className = "inline-label";
+    const chkPlate = document.createElement("input");
+    chkPlate.type = "checkbox";
+    chkPlate.className = "room-plate";
+    chkPlate.checked = prev ? !!prev.plate : false;
+    labelPlate.appendChild(chkPlate);
+    labelPlate.appendChild(document.createTextNode("プレート"));
+    tdTag.appendChild(labelPlate);
 
-      tr.appendChild(tdTag);
+    tr.appendChild(tdTag);
 
-      // メモ
-      const tdMemo = document.createElement("td");
-      const inputMemo = document.createElement("input");
-      inputMemo.type = "text";
-      inputMemo.className = "room-memo";
-      inputMemo.maxLength = 10;
-      inputMemo.style.width = "100%";
-      inputMemo.value = prev && prev.memo ? prev.memo : "";
-      tdMemo.appendChild(inputMemo);
-      tr.appendChild(tdMemo);
+    // メモ
+    const tdMemo = document.createElement("td");
+    const inputMemo = document.createElement("input");
+    inputMemo.type = "text";
+    inputMemo.className = "room-memo";
+    inputMemo.maxLength = 10;
+    inputMemo.style.width = "100%";
+    inputMemo.value = prev && prev.memo ? prev.memo : "";
+    tdMemo.appendChild(inputMemo);
+    tr.appendChild(tdMemo);
 
-      tbody.appendChild(tr);
-    }
+    tbody.appendChild(tr);
+  }
 
-    function getAllRoomNames() {
-      return Array.from(document.querySelectorAll("#roomsBody tr")).map(
-        (tr) => tr.dataset.roomName
-      );
-    }
+  // =====================
+  // 追加料理
+  // =====================
+  function createExtraRow(prev) {
+    const tbody = document.getElementById("extrasBody");
+    const tr = document.createElement("tr");
+    tr.className = "extra-row";
 
-    // ---- 追加料理行 ----
-    function createExtraRow(prev) {
-      const tbody = document.getElementById("extrasBody");
-      const tr = document.createElement("tr");
-      tr.className = "extra-row";
+    // 品名
+    const tdName = document.createElement("td");
+    const inputName = document.createElement("input");
+    inputName.type = "text";
+    inputName.className = "extra-name";
+    inputName.style.width = "100%";
+    inputName.value = prev && prev.name ? prev.name : "";
+    tdName.appendChild(inputName);
+    tr.appendChild(tdName);
 
-      // 品名
-      const tdName = document.createElement("td");
-      const inputName = document.createElement("input");
-      inputName.type = "text";
-      inputName.className = "extra-name";
-      inputName.style.width = "100%";
-      inputName.value = prev && prev.name ? prev.name : "";
-      tdName.appendChild(inputName);
-      tr.appendChild(tdName);
-
-      // 数量
-      const tdQty = document.createElement("td");
-      const selQty = document.createElement("select");
-      selQty.className = "extra-qty";
-      ["1", "2", "3", "custom"].forEach((v) => {
-        const opt = document.createElement("option");
-        opt.value = v;
-        opt.textContent = v === "custom" ? "カスタマイズ" : v;
-        selQty.appendChild(opt);
-      });
-      const inputQtyCustom = document.createElement("input");
-      inputQtyCustom.type = "text";
-      inputQtyCustom.className = "extra-qty-custom";
-      inputQtyCustom.placeholder = "例：1皿を2名で";
-      inputQtyCustom.style.display = "none";
-      selQty.addEventListener("change", () => {
-        if (selQty.value === "custom") {
-          inputQtyCustom.style.display = "inline-block";
-        } else {
-          inputQtyCustom.style.display = "none";
-        }
-      });
-      if (prev && prev.qty) {
-        selQty.value = prev.qty;
-        if (prev.qty === "custom") {
-          inputQtyCustom.style.display = "inline-block";
-          inputQtyCustom.value = prev.qtyCustom || "";
-        }
+    // 数量
+    const tdQty = document.createElement("td");
+    const selQty = document.createElement("select");
+    selQty.className = "extra-qty";
+    ["1", "2", "3", "custom"].forEach((v) => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v === "custom" ? "カスタマイズ" : v;
+      selQty.appendChild(opt);
+    });
+    const inputQtyCustom = document.createElement("input");
+    inputQtyCustom.type = "text";
+    inputQtyCustom.className = "extra-qty-custom";
+    inputQtyCustom.placeholder = "例：1皿を2名で";
+    inputQtyCustom.style.display = "none";
+    selQty.addEventListener("change", () => {
+      if (selQty.value === "custom") {
+        inputQtyCustom.style.display = "inline-block";
       } else {
-        selQty.value = "1";
+        inputQtyCustom.style.display = "none";
       }
-      tdQty.appendChild(selQty);
-      tdQty.appendChild(inputQtyCustom);
-      tr.appendChild(tdQty);
-
-      // 挿入位置
-      const tdPos = document.createElement("td");
-      const selPos = document.createElement("select");
-      selPos.className = "extra-position";
-      const positions = [
-        { value: "before-kasai", label: "果菜盛りの前" },
-        { value: "before-mushi", label: "蒸物の前" },
-        { value: "before-age", label: "揚物の前" },
-        { value: "before-ni", label: "煮物の前" },
-        { value: "before-gohan", label: "ご飯の前" },
-        { value: "before-amami", label: "甘味の前" }
-      ];
-      positions.forEach((p) => {
-        const opt = document.createElement("option");
-        opt.value = p.value;
-        opt.textContent = p.label;
-        selPos.appendChild(opt);
-      });
-      selPos.value = prev && prev.position ? prev.position : "before-kasai";
-      tdPos.appendChild(selPos);
-      tr.appendChild(tdPos);
-
-      // 部屋指定
-      const tdRooms = document.createElement("td");
-      const inputRooms = document.createElement("input");
-      inputRooms.type = "text";
-      inputRooms.className = "extra-rooms";
-      inputRooms.style.width = "100%";
-      if (prev && Array.isArray(prev.targetRooms) && prev.targetRooms.length) {
-        inputRooms.value = prev.targetRooms.join("/");
+    });
+    if (prev && prev.qty) {
+      selQty.value = prev.qty;
+      if (prev.qty === "custom") {
+        inputQtyCustom.style.display = "inline-block";
+        inputQtyCustom.value = prev.qtyCustom || "";
       }
-      tdRooms.appendChild(inputRooms);
-      tr.appendChild(tdRooms);
-
-      // 操作
-      const tdOp = document.createElement("td");
-      const btnDel = document.createElement("button");
-      btnDel.type = "button";
-      btnDel.className = "btn btn-ghost";
-      btnDel.textContent = "削除";
-      btnDel.addEventListener("click", () => {
-        tbody.removeChild(tr);
-      });
-      tdOp.appendChild(btnDel);
-      tr.appendChild(tdOp);
-
-      tbody.appendChild(tr);
+    } else {
+      selQty.value = "1";
     }
+    tdQty.appendChild(selQty);
+    tdQty.appendChild(inputQtyCustom);
+    tr.appendChild(tdQty);
 
-    // ---- アレルギータグ行 ----
-    function fillAllergyRoomOptions(selectEl) {
-      const names = getAllRoomNames();
-      selectEl.innerHTML = "";
+    // 挿入位置
+    const tdPos = document.createElement("td");
+    const selPos = document.createElement("select");
+    selPos.className = "extra-position";
+    const positions = [
+      { value: "before-kasai", label: "果菜盛りの前" },
+      { value: "before-mushi", label: "蒸物の前" },
+      { value: "before-age", label: "揚物の前" },
+      { value: "before-ni", label: "煮物の前" },
+      { value: "before-gohan", label: "ご飯の前" },
+      { value: "before-amami", label: "甘味の前" }
+    ];
+    positions.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.value;
+      opt.textContent = p.label;
+      selPos.appendChild(opt);
+    });
+    selPos.value = prev && prev.position ? prev.position : "before-kasai";
+    tdPos.appendChild(selPos);
+    tr.appendChild(tdPos);
+
+    // 部屋指定
+    const tdRooms = document.createElement("td");
+    const inputRooms = document.createElement("input");
+    inputRooms.type = "text";
+    inputRooms.className = "extra-rooms";
+    inputRooms.style.width = "100%";
+    if (prev && Array.isArray(prev.targetRooms) && prev.targetRooms.length) {
+      inputRooms.value = prev.targetRooms.join("/");
+    }
+    tdRooms.appendChild(inputRooms);
+    tr.appendChild(tdRooms);
+
+    // 操作
+    const tdOp = document.createElement("td");
+    const btnDel = document.createElement("button");
+    btnDel.type = "button";
+    btnDel.className = "btn btn-ghost";
+    btnDel.textContent = "削除";
+    btnDel.addEventListener("click", () => {
+      tbody.removeChild(tr);
+    });
+    tdOp.appendChild(btnDel);
+    tr.appendChild(tdOp);
+
+    tbody.appendChild(tr);
+  }
+
+  // =====================
+  // アレルギータグ
+  // =====================
+  function fillAllergyRoomOptions(selectEl) {
+    const names = getAllRoomNames();
+    selectEl.innerHTML = "";
+    const optEmpty = document.createElement("option");
+    optEmpty.value = "";
+    optEmpty.textContent = "（部屋を選択）";
+    selectEl.appendChild(optEmpty);
+    names.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function updateAllergyRoomOptionsAll() {
+    const selects = document.querySelectorAll(".allergy-room");
+    const names = getAllRoomNames();
+    selects.forEach((sel) => {
+      const current = sel.value;
+      sel.innerHTML = "";
       const optEmpty = document.createElement("option");
       optEmpty.value = "";
       optEmpty.textContent = "（部屋を選択）";
-      selectEl.appendChild(optEmpty);
+      sel.appendChild(optEmpty);
       names.forEach((name) => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
-        selectEl.appendChild(opt);
+        sel.appendChild(opt);
       });
-    }
-
-    function updateAllergyRoomOptionsAll() {
-      const selects = document.querySelectorAll(".allergy-room");
-      const names = getAllRoomNames();
-      selects.forEach((sel) => {
-        const current = sel.value;
-        sel.innerHTML = "";
-        const optEmpty = document.createElement("option");
-        optEmpty.value = "";
-        optEmpty.textContent = "（部屋を選択）";
-        sel.appendChild(optEmpty);
-        names.forEach((name) => {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          sel.appendChild(opt);
-        });
-        if (names.includes(current)) {
-          sel.value = current;
-        } else {
-          sel.value = "";
-        }
-      });
-    }
-
-    function createAllergyTagRow(prev) {
-      const tbody = document.getElementById("allergyTagBody");
-      const tr = document.createElement("tr");
-      tr.className = "allergy-row";
-
-      // 部屋
-      const tdRoom = document.createElement("td");
-      const selRoom = document.createElement("select");
-      selRoom.className = "allergy-room";
-      fillAllergyRoomOptions(selRoom);
-      if (prev && prev.roomName) selRoom.value = prev.roomName;
-      tdRoom.appendChild(selRoom);
-      tr.appendChild(tdRoom);
-
-      // コース
-      const tdCourse = document.createElement("td");
-      const selCourse = document.createElement("select");
-      selCourse.className = "allergy-course";
-      const optEmpty = document.createElement("option");
-      optEmpty.value = "";
-      optEmpty.textContent = "（コースを選択）";
-      selCourse.appendChild(optEmpty);
-      ALLERGY_COURSE_LABELS.forEach((label) => {
-        const opt = document.createElement("option");
-        opt.value = label;
-        opt.textContent = label;
-        selCourse.appendChild(opt);
-      });
-      if (prev && prev.courseLabel) selCourse.value = prev.courseLabel;
-      tdCourse.appendChild(selCourse);
-      tr.appendChild(tdCourse);
-
-      // ラベル
-      const tdLabel = document.createElement("td");
-      const inputLabel = document.createElement("input");
-      inputLabel.type = "text";
-      inputLabel.className = "allergy-label";
-      inputLabel.maxLength = 8;
-      inputLabel.style.width = "100%";
-      inputLabel.placeholder = "例：1名ｴﾋﾞNG";
-      inputLabel.value = prev && prev.label ? prev.label : "";
-      tdLabel.appendChild(inputLabel);
-      tr.appendChild(tdLabel);
-
-      // 操作
-      const tdOp = document.createElement("td");
-      const btnDel = document.createElement("button");
-      btnDel.type = "button";
-      btnDel.className = "btn btn-ghost";
-      btnDel.textContent = "削除";
-      btnDel.addEventListener("click", () => {
-        tbody.removeChild(tr);
-      });
-      tdOp.appendChild(btnDel);
-      tr.appendChild(tdOp);
-
-      tbody.appendChild(tr);
-    }
-
-    // ---- スタッフ ----
-    function initStaffs(saved) {
-      const savedStaffs = (saved && saved.staffs) || [];
-      const fixedInputs = Array.from(document.querySelectorAll(".staff-check"));
-      const others = [];
-
-      savedStaffs.forEach((name) => {
-        const fixed = fixedInputs.find((i) => i.value === name);
-        if (fixed) {
-          fixed.checked = true;
-        } else {
-          others.push(name);
-        }
-      });
-
-      if (others.length) {
-        document.getElementById("customStaffNames").value = others.join("/");
-      }
-    }
-
-    function collectStaffs() {
-      const names = [];
-      document
-        .querySelectorAll(".staff-check:checked")
-        .forEach((chk) => names.push(chk.value));
-
-      const customRaw = document
-        .getElementById("customStaffNames")
-        .value.trim();
-      if (customRaw) {
-        const parts = customRaw.split(/[\/／,、\s]+/).filter(Boolean);
-        names.push(...parts);
-      }
-      return names;
-    }
-
-    // ---- 保存系 ----
-    function collectRooms() {
-      const rooms = [];
-      document.querySelectorAll("#roomsBody tr").forEach((tr) => {
-        const name = tr.dataset.roomName;
-        const enabled = tr.querySelector(".room-use").checked;
-
-        const selPeople = tr.querySelector(".room-people-select");
-        const customPeople = tr.querySelector(".room-people-custom");
-        let peopleDisplay = "";
-        if (selPeople.value === "custom") {
-          peopleDisplay = customPeople.value.trim();
-        } else {
-          peopleDisplay = selPeople.value;
-        }
-
-        const time = tr.querySelector(".room-time").value;
-        const plan = tr.querySelector(".room-plan").value;
-        const memo = tr.querySelector(".room-memo").value.trim();
-        const cake = tr.querySelector(".room-cake").checked;
-        const plate = tr.querySelector(".room-plate").checked;
-
-        rooms.push({
-          enabled,
-          name,
-          peopleDisplay,
-          time,
-          plan,
-          memo,
-          cake,
-          plate
-        });
-      });
-      return rooms;
-    }
-
-    function collectExtras() {
-      const extras = [];
-      document.querySelectorAll(".extra-row").forEach((tr) => {
-        const name = tr.querySelector(".extra-name").value.trim();
-        if (!name) return;
-
-        const qtySel = tr.querySelector(".extra-qty");
-        const qty = qtySel.value;
-        const qtyCustomInput = tr.querySelector(".extra-qty-custom");
-        const qtyCustom =
-          qty === "custom" ? qtyCustomInput.value.trim() : "";
-
-        const position = tr.querySelector(".extra-position").value;
-        const roomsRaw = tr.querySelector(".extra-rooms").value.trim();
-        let targetRooms = [];
-        if (roomsRaw) {
-          targetRooms = roomsRaw.split(/[\/／,、\s]+/).filter(Boolean);
-        }
-
-        extras.push({
-          name,
-          qty,
-          qtyCustom,
-          position,
-          targetRooms
-        });
-      });
-      return extras;
-    }
-
-    function collectAllergyTags() {
-      const tags = [];
-      document.querySelectorAll(".allergy-row").forEach((tr) => {
-        const roomName = tr.querySelector(".allergy-room").value;
-        const courseLabel = tr.querySelector(".allergy-course").value;
-        const label = tr.querySelector(".allergy-label").value.trim();
-        if (!roomName || !courseLabel || !label) return;
-        tags.push({ roomName, courseLabel, label });
-      });
-      return tags;
-    }
-
-    function saveAndGo() {
-      const data = {
-        date: getTodayKey(),
-        rooms: collectRooms(),
-        extras: collectExtras(),
-        allergyTags: collectAllergyTags(),
-        staffs: collectStaffs()
-      };
-
-      localStorage.setItem(INDEX_STORAGE_KEY, JSON.stringify(data));
-      if (confirm("本日の設定を保存しました。Order画面に移動しますか？")) {
-        window.location.href = ORDER_PAGE_URL + "&nocache=" + Date.now();
-      }
-    }
-
-    // ---- 初期化 ----
-    document.addEventListener("DOMContentLoaded", () => {
-      const saved = loadIndexData();
-
-      // 部屋
-      if (saved && Array.isArray(saved.rooms) && saved.rooms.length) {
-        FIXED_ROOMS.forEach((name) => {
-          const prev = saved.rooms.find((r) => r.name === name) || null;
-          createRoomRow(name, false, prev);
-        });
-        const customRooms = saved.rooms.filter(
-          (r) => !FIXED_ROOMS.includes(r.name)
-        );
-        customRooms.forEach((r) => createRoomRow(r.name, true, r));
+      if (names.includes(current)) {
+        sel.value = current;
       } else {
-        FIXED_ROOMS.forEach((name) => {
-          createRoomRow(name, false, null);
-        });
+        sel.value = "";
       }
-
-      // 追加料理
-      if (saved && Array.isArray(saved.extras) && saved.extras.length) {
-        saved.extras.forEach((ex) => createExtraRow(ex));
-      } else {
-        createExtraRow(null);
-      }
-
-      // アレルギータグ
-      if (saved && Array.isArray(saved.allergyTags) && saved.allergyTags.length) {
-        saved.allergyTags.forEach((tag) => createAllergyTagRow(tag));
-      } else {
-        createAllergyTagRow(null);
-      }
-      updateAllergyRoomOptionsAll();
-
-      // スタッフ
-      initStaffs(saved);
-
-      // イベント
-      document
-        .getElementById("addCustomRoomBtn")
-        .addEventListener("click", () => {
-          const input = document.getElementById("customRoomName");
-          const name = input.value.trim();
-          if (!name) {
-            alert("カスタム部屋名を入力してください。");
-            return;
-          }
-          const existingNames = getAllRoomNames();
-          if (existingNames.includes(name)) {
-            alert("同じ名前の部屋がすでに存在します。");
-            return;
-          }
-          createRoomRow(name, true, null);
-          input.value = "";
-          updateAllergyRoomOptionsAll();
-        });
-
-      document
-        .getElementById("addExtraRowBtn")
-        .addEventListener("click", () => createExtraRow(null));
-
-      document
-        .getElementById("addAllergyTagRowBtn")
-        .addEventListener("click", () => createAllergyTagRow(null));
-
-      document
-        .getElementById("saveBtn")
-        .addEventListener("click", () => saveAndGo());
     });
-  </script>
+  }
+
+  // 指定した部屋のプランに応じて、その行のコース候補を埋める
+  function fillAllergyCourseOptionsForRoom(selectEl, roomName) {
+    selectEl.innerHTML = "";
+    const optEmpty = document.createElement("option");
+    optEmpty.value = "";
+    optEmpty.textContent = "（コースを選択）";
+    selectEl.appendChild(optEmpty);
+
+    if (!roomName) return;
+
+    const planKey = getPlanForRoom(roomName);
+    const labels =
+      (planKey && PLAN_COURSES[planKey]) || ALLERGY_COURSE_LABELS;
+
+    labels.forEach((label) => {
+      const opt = document.createElement("option");
+      opt.value = label;
+      opt.textContent = label;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  // ある部屋に対する全タグ行のコース候補を更新（プラン変更時に使用）
+  function updateAllergyCourseOptionsForRoom(roomName) {
+    document.querySelectorAll(".allergy-row").forEach((tr) => {
+      const selRoom = tr.querySelector(".allergy-room");
+      const selCourse = tr.querySelector(".allergy-course");
+      if (!selRoom || !selCourse) return;
+      if (selRoom.value !== roomName) return;
+      const prev = selCourse.value;
+      fillAllergyCourseOptionsForRoom(selCourse, roomName);
+      if (
+        prev &&
+        Array.from(selCourse.options).some((opt) => opt.value === prev)
+      ) {
+        selCourse.value = prev;
+      }
+    });
+  }
+
+  function createAllergyTagRow(prev) {
+    const tbody = document.getElementById("allergyTagBody");
+    const tr = document.createElement("tr");
+    tr.className = "allergy-row";
+
+    // 部屋
+    const tdRoom = document.createElement("td");
+    const selRoom = document.createElement("select");
+    selRoom.className = "allergy-room";
+    fillAllergyRoomOptions(selRoom);
+    if (prev && prev.roomName) selRoom.value = prev.roomName;
+    tdRoom.appendChild(selRoom);
+    tr.appendChild(tdRoom);
+
+    // コース
+    const tdCourse = document.createElement("td");
+    const selCourse = document.createElement("select");
+    selCourse.className = "allergy-course";
+    fillAllergyCourseOptionsForRoom(selCourse, selRoom.value || "");
+    if (prev && prev.courseLabel) {
+      selCourse.value = prev.courseLabel;
+    }
+    // 部屋を切り替えたら、その部屋のプランに応じて候補だけ出す
+    selRoom.addEventListener("change", () => {
+      fillAllergyCourseOptionsForRoom(selCourse, selRoom.value || "");
+    });
+    tdCourse.appendChild(selCourse);
+    tr.appendChild(tdCourse);
+
+    // ラベル
+    const tdLabel = document.createElement("td");
+    const inputLabel = document.createElement("input");
+    inputLabel.type = "text";
+    inputLabel.className = "allergy-label";
+    inputLabel.maxLength = 8;
+    inputLabel.style.width = "100%";
+    inputLabel.placeholder = "例：1名ｴﾋﾞNG";
+    inputLabel.value = prev && prev.label ? prev.label : "";
+    tdLabel.appendChild(inputLabel);
+    tr.appendChild(tdLabel);
+
+    // 操作
+    const tdOp = document.createElement("td");
+    const btnDel = document.createElement("button");
+    btnDel.type = "button";
+    btnDel.className = "btn btn-ghost";
+    btnDel.textContent = "削除";
+    btnDel.addEventListener("click", () => {
+      tbody.removeChild(tr);
+    });
+    tdOp.appendChild(btnDel);
+    tr.appendChild(tdOp);
+
+    tbody.appendChild(tr);
+  }
+
+  function collectAllergyTags() {
+    const tags = [];
+    document.querySelectorAll(".allergy-row").forEach((tr) => {
+      const roomName = tr.querySelector(".allergy-room").value;
+      const courseLabel = tr.querySelector(".allergy-course").value;
+      const label = tr.querySelector(".allergy-label").value.trim();
+      if (!roomName || !courseLabel || !label) return;
+      tags.push({ roomName, courseLabel, label });
+    });
+    return tags;
+  }
+
+  // =====================
+  // スタッフ
+  // =====================
+  function initStaffs(saved) {
+    const savedStaffs = (saved && saved.staffs) || [];
+    const fixedInputs = Array.from(document.querySelectorAll(".staff-check"));
+    const others = [];
+
+    savedStaffs.forEach((name) => {
+      const fixed = fixedInputs.find((i) => i.value === name);
+      if (fixed) {
+        fixed.checked = true;
+      } else {
+        others.push(name);
+      }
+    });
+
+    if (others.length) {
+      document.getElementById("customStaffNames").value = others.join("/");
+    }
+  }
+
+  function collectStaffs() {
+    const names = [];
+    document
+      .querySelectorAll(".staff-check:checked")
+      .forEach((chk) => names.push(chk.value));
+
+    const customRaw = document
+      .getElementById("customStaffNames")
+      .value.trim();
+    if (customRaw) {
+      const parts = customRaw.split(/[\/／,、\s]+/).filter(Boolean);
+      names.push(...parts);
+    }
+    return names;
+  }
+
+  // =====================
+  // 保存系
+  // =====================
+  function collectRooms() {
+    const rooms = [];
+    document.querySelectorAll("#roomsBody tr").forEach((tr) => {
+      const name = tr.dataset.roomName;
+      const enabled = tr.querySelector(".room-use").checked;
+
+      const selPeople = tr.querySelector(".room-people-select");
+      const customPeople = tr.querySelector(".room-people-custom");
+      let peopleDisplay = "";
+      if (selPeople.value === "custom") {
+        peopleDisplay = customPeople.value.trim();
+      } else {
+        peopleDisplay = selPeople.value;
+      }
+
+      const time = tr.querySelector(".room-time").value;
+      const plan = tr.querySelector(".room-plan").value;
+      const memo = tr.querySelector(".room-memo").value.trim();
+      const cake = tr.querySelector(".room-cake").checked;
+      const plate = tr.querySelector(".room-plate").checked;
+
+      rooms.push({
+        enabled,
+        name,
+        peopleDisplay,
+        time,
+        plan,
+        memo,
+        cake,
+        plate
+      });
+    });
+    return rooms;
+  }
+
+  function collectExtras() {
+    const extras = [];
+    document.querySelectorAll(".extra-row").forEach((tr) => {
+      const name = tr.querySelector(".extra-name").value.trim();
+      if (!name) return;
+
+      const qtySel = tr.querySelector(".extra-qty");
+      const qty = qtySel.value;
+      const qtyCustomInput = tr.querySelector(".extra-qty-custom");
+      const qtyCustom = qty === "custom" ? qtyCustomInput.value.trim() : "";
+
+      const position = tr.querySelector(".extra-position").value;
+      const roomsRaw = tr.querySelector(".extra-rooms").value.trim();
+      let targetRooms = [];
+      if (roomsRaw) {
+        targetRooms = roomsRaw.split(/[\/／,、\s]+/).filter(Boolean);
+      }
+
+      extras.push({
+        name,
+        qty,
+        qtyCustom,
+        position,
+        targetRooms
+      });
+    });
+    return extras;
+  }
+
+  function saveAndGo() {
+    const data = {
+      date: getTodayKey(),
+      rooms: collectRooms(),
+      extras: collectExtras(),
+      allergyTags: collectAllergyTags(),
+      staffs: collectStaffs()
+    };
+
+    localStorage.setItem(INDEX_STORAGE_KEY, JSON.stringify(data));
+    if (confirm("本日の設定を保存しました。Order画面に移動しますか？")) {
+      window.location.href = ORDER_PAGE_URL + "&nocache=" + Date.now();
+    }
+  }
+
+  // =====================
+  // 初期化
+  // =====================
+  document.addEventListener("DOMContentLoaded", () => {
+    const saved = loadIndexData();
+
+    // 部屋
+    if (saved && Array.isArray(saved.rooms) && saved.rooms.length) {
+      FIXED_ROOMS.forEach((name) => {
+        const prev = saved.rooms.find((r) => r.name === name) || null;
+        createRoomRow(name, false, prev);
+      });
+      const customRooms = saved.rooms.filter(
+        (r) => !FIXED_ROOMS.includes(r.name)
+      );
+      customRooms.forEach((r) => createRoomRow(r.name, true, r));
+    } else {
+      FIXED_ROOMS.forEach((name) => {
+        createRoomRow(name, false, null);
+      });
+    }
+
+    // 追加料理
+    if (saved && Array.isArray(saved.extras) && saved.extras.length) {
+      saved.extras.forEach((ex) => createExtraRow(ex));
+    } else {
+      createExtraRow(null);
+    }
+
+    // アレルギータグ
+    if (saved && Array.isArray(saved.allergyTags) && saved.allergyTags.length) {
+      saved.allergyTags.forEach((tag) => createAllergyTagRow(tag));
+    } else {
+      createAllergyTagRow(null);
+    }
+    updateAllergyRoomOptionsAll();
+
+    // スタッフ
+    initStaffs(saved);
+
+    // イベント
+    document
+      .getElementById("addCustomRoomBtn")
+      .addEventListener("click", () => {
+        const input = document.getElementById("customRoomName");
+        const name = input.value.trim();
+        if (!name) {
+          alert("カスタム部屋名を入力してください。");
+          return;
+        }
+        const existingNames = getAllRoomNames();
+        if (existingNames.includes(name)) {
+          alert("同じ名前の部屋がすでに存在します。");
+          return;
+        }
+        createRoomRow(name, true, null);
+        input.value = "";
+        updateAllergyRoomOptionsAll();
+      });
+
+    document
+      .getElementById("addExtraRowBtn")
+      .addEventListener("click", () => createExtraRow(null));
+
+    document
+      .getElementById("addAllergyTagRowBtn")
+      .addEventListener("click", () => createAllergyTagRow(null));
+
+    document
+      .getElementById("saveBtn")
+      .addEventListener("click", () => saveAndGo());
+  });
+</script>
+
 </body>
 </html>
