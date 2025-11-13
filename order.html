@@ -27,6 +27,18 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .link-back {
       font-size: 14px;
       text-decoration: none;
@@ -50,6 +62,18 @@
       font-size: 12px;
       color: #555;
       margin: 0 0 8px;
+    }
+
+    label.filter-label {
+      font-size: 12px;
+    }
+    #statusFilter {
+      font-size: 12px;
+      padding: 2px 4px;
+    }
+    #roomSearch {
+      font-size: 12px;
+      padding: 4px 6px;
     }
 
     section.group-section {
@@ -98,7 +122,8 @@
       padding: 2px 6px;
       border-radius: 999px;
       background: #e5f4ff;
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: bold;
     }
     .room-memo {
       font-size: 12px;
@@ -140,7 +165,7 @@
 
     .course-cell {
       flex: 0 0 auto;
-      width: 90px;
+      width: 96px;
       text-align: center;
       font-size: 12px;
     }
@@ -152,8 +177,8 @@
     }
 
     .course-btn {
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
       border: none;
       font-size: 14px;
@@ -172,11 +197,15 @@
       background: #ffe4b3;
       color: #7f4e00;
     }
-    .course-btn.state-注 {
+    .course-btn.state-肉 {
+      background: #ffc9c9;
+      color: #842029;
+    }
+    .course-btn.state-発注 {
       background: #b3e5ff;
       color: #004b7f;
     }
-    .course-btn.state-提 {
+    .course-btn.state-提供 {
       background: #b2f2bb;
       color: #1b5e20;
     }
@@ -192,16 +221,28 @@
       font-weight: bold;
     }
 
-    .wait-time {
-      font-size: 12px;
+    .info-line {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      min-height: 1.4em;
       margin-top: 2px;
+    }
+    .w-label {
       cursor: pointer;
-      min-height: 1.2em;
+      min-width: 40px;
+    }
+    .wait-time {
+      cursor: pointer;
+      min-width: 40px;
     }
     .staff-label {
       font-size: 12px;
       margin-top: 2px;
       min-height: 1.2em;
+      cursor: pointer;
     }
 
     /* モーダル */
@@ -221,7 +262,7 @@
       background: #ffffff;
       border-radius: 12px;
       padding: 16px;
-      max-width: 340px;
+      max-width: 360px;
       width: 90%;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     }
@@ -267,15 +308,30 @@
 </head>
 <body>
   <div class="top-bar">
-    <a href="index.html" class="link-back">← 本日の設定に戻る</a>
-    <div>
+    <div class="top-bar-left">
+      <a href="index.html" class="link-back">← 本日の設定に戻る</a>
+    </div>
+    <div class="top-bar-right">
+      <label class="filter-label">
+        状態:
+        <select id="statusFilter">
+          <option value="all">すべて</option>
+          <option value="未">未</option>
+          <option value="待">待</option>
+          <option value="肉">肉</option>
+          <option value="発注">発注</option>
+          <option value="提供">提供</option>
+        </select>
+      </label>
+      <input id="roomSearch" type="text" placeholder="部屋名検索" />
       <button id="undoBtn" class="btn-ghost">Undo（1つ戻す）</button>
     </div>
   </div>
+
   <h1>Order画面</h1>
   <p class="small-note">
-    ◯ボタンで進行管理 / 「待」にした直後に提供予定時刻を設定 / 「提」にした直後にスタッフ選択 /
-    アレルギーは料理名の下の表示をタップして入力できます。
+    ◯ボタン：通常「未→待→発注→提供→未」、ステーキ／煮物のみ「未→待→肉→発注→提供→未」。
+    「待」で人数Wと提供予定時刻、「提供」でスタッフを選択。アレルギーは料理名下の表示をタップして入力します。
   </p>
 
   <div id="groupsContainer"></div>
@@ -293,7 +349,7 @@
 
   <script>
     const INDEX_STORAGE_KEY = "orderSystemIndexV1";
-    const ORDER_STORAGE_KEY = "orderSystemBoardV1";
+    const ORDER_STORAGE_KEY = "orderSystemBoardV2"; // 新バージョン
 
     const PLAN_COURSES = {
       standard: ["吸物", "果菜盛り", "蒸物", "揚物", "煮物", "ご飯", "甘味"],
@@ -303,19 +359,19 @@
       renpaku: ["茶碗蒸し", "牛たたき", "焼物", "小鉢", "揚物", "ご飯", "甘味"]
     };
 
-    const SIMPLE_FLOW_LABELS = new Set(["果菜盛り", "しゃぶしゃぶ"]);
-
     const GROUP_TIMES = ["18:00", "18:30", "19:00"];
 
     let board = null;
     let historyStack = [];
+    let currentStatusFilter = "all";
+    let currentRoomSearch = "";
 
     const overlayEl = document.getElementById("overlay");
     const modalTitleEl = document.getElementById("modalTitle");
     const modalBodyEl = document.getElementById("modalBody");
     const modalCancelBtn = document.getElementById("modalCancel");
 
-    let modalOnCancel = null; // コールバック
+    let modalOnCancel = null;
 
     function getTodayKey() {
       const d = new Date();
@@ -419,14 +475,25 @@
       }
     }
 
+    function isMeatCourseLabel(label) {
+      return label.includes("ステーキ") || label.includes("煮物");
+    }
+
+    function getFlowForCourse(course) {
+      if (isMeatCourseLabel(course.label)) {
+        return ["未", "待", "肉", "発注", "提供"];
+      }
+      return ["未", "待", "発注", "提供"];
+    }
+
     function buildBaseCourses(planKey) {
       const labels = PLAN_COURSES[planKey] || [];
       return labels.map((label, idx) => ({
         id: `${planKey}-${idx}-${label}`,
         label,
-        isSimpleFlow: SIMPLE_FLOW_LABELS.has(label),
         isExtra: false,
         state: "未",
+        wCount: 0,
         waitLabel: "",
         allergy: "",
         staff: ""
@@ -462,9 +529,9 @@
         const extraCourse = {
           id: `extra-${idx}-${roomName}`,
           label,
-          isSimpleFlow: false, // 追加料理は通常フロー
           isExtra: true,
           state: "未",
+          wCount: 0,
           waitLabel: "",
           allergy: "",
           staff: ""
@@ -535,12 +602,56 @@
 
     function formatNowPlusMinutesLabel(minutes) {
       const now = new Date();
-      const m = now.getMinutes() + minutes;
-      const h = now.getHours() + Math.floor(m / 60);
-      const newM = m % 60;
+      const totalMinutes = now.getHours() * 60 + now.getMinutes() + minutes;
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
       const hh = String(h).padStart(2, "0");
-      const mm = String(newM).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
       return `${hh}:${mm}`;
+    }
+
+    // === モーダル群 ===
+    function openWModal(room, course, onSelect, onCancel) {
+      modalTitleEl.textContent = `${room.name}「${course.label}」の人数W`;
+      modalBodyEl.innerHTML = "";
+
+      const p = document.createElement("p");
+      p.textContent = "焼き加減などの管理用に、人数Wを指定してください。不要な場合は「なし」を選んでください。";
+      modalBodyEl.appendChild(p);
+
+      const optionsDiv = document.createElement("div");
+      optionsDiv.className = "modal-options";
+
+      const options = [
+        { label: "なし", value: 0 },
+        { label: "1名", value: 1 },
+        { label: "2名", value: 2 },
+        { label: "3名", value: 3 },
+        { label: "4名", value: 4 },
+        { label: "5名", value: 5 }
+      ];
+
+      options.forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-ghost";
+        btn.textContent = opt.label;
+        btn.addEventListener("click", () => {
+          course.wCount = opt.value;
+          closeModal();
+          if (onSelect) onSelect();
+        });
+        optionsDiv.appendChild(btn);
+      });
+
+      modalBodyEl.appendChild(optionsDiv);
+
+      modalOnCancel = () => {
+        closeModal();
+        if (onCancel) onCancel();
+      };
+
+      overlayEl.classList.add("show");
     }
 
     function openWaitModal(room, course, onSelect, onCancel) {
@@ -617,7 +728,6 @@
         optionsDiv.appendChild(btn);
       });
 
-      // スタッフ未指定ボタン
       const noneBtn = document.createElement("button");
       noneBtn.type = "button";
       noneBtn.className = "btn-ghost";
@@ -703,34 +813,49 @@
       }
     });
 
+    // === ハンドラ ===
+    function startWaitSequence(room, course) {
+      const cancelAll = () => {
+        undoLast();
+      };
+
+      openWModal(
+        room,
+        course,
+        () => {
+          openWaitModal(
+            room,
+            course,
+            () => {
+              renderBoard();
+              saveBoard();
+            },
+            cancelAll
+          );
+        },
+        cancelAll
+      );
+    }
+
     function handleCourseButtonClick(roomId, courseIndex) {
       const found = findRoomById(roomId);
       if (!found) return;
       const course = found.room.courses[courseIndex];
       const prevState = course.state || "未";
-      const flow = course.isSimpleFlow ? ["未", "待", "提"] : ["未", "待", "注", "提"];
+      const flow = getFlowForCourse(course);
       let idx = flow.indexOf(prevState);
       if (idx < 0) idx = 0;
       const nextState = flow[(idx + 1) % flow.length];
+
+      if (nextState === prevState) return;
 
       pushHistory();
 
       course.state = nextState;
 
       if (nextState === "待") {
-        openWaitModal(
-          found.room,
-          course,
-          () => {
-            renderBoard();
-            saveBoard();
-          },
-          () => {
-            // キャンセル → 元に戻す
-            undoLast();
-          }
-        );
-      } else if (nextState === "提") {
+        startWaitSequence(found.room, course);
+      } else if (nextState === "提供") {
         openStaffModal(
           found.room,
           course,
@@ -742,6 +867,12 @@
             undoLast();
           }
         );
+      } else if (nextState === "未" && prevState === "提供") {
+        course.wCount = 0;
+        course.waitLabel = "";
+        course.staff = "";
+        renderBoard();
+        saveBoard();
       } else {
         renderBoard();
         saveBoard();
@@ -755,6 +886,25 @@
 
       pushHistory();
       openWaitModal(
+        found.room,
+        course,
+        () => {
+          renderBoard();
+          saveBoard();
+        },
+        () => {
+          undoLast();
+        }
+      );
+    }
+
+    function handleWClick(roomId, courseIndex) {
+      const found = findRoomById(roomId);
+      if (!found) return;
+      const course = found.room.courses[courseIndex];
+
+      pushHistory();
+      openWModal(
         found.room,
         course,
         () => {
@@ -786,6 +936,26 @@
       );
     }
 
+    function handleStaffClick(roomId, courseIndex) {
+      const found = findRoomById(roomId);
+      if (!found) return;
+      const course = found.room.courses[courseIndex];
+
+      pushHistory();
+      openStaffModal(
+        found.room,
+        course,
+        () => {
+          renderBoard();
+          saveBoard();
+        },
+        () => {
+          undoLast();
+        }
+      );
+    }
+
+    // === 描画 ===
     function renderBoard() {
       const container = document.getElementById("groupsContainer");
       container.innerHTML = "";
@@ -798,7 +968,6 @@
 
       GROUP_TIMES.forEach((time) => {
         const rooms = board.groups[time] || [];
-        if (!rooms.length) return;
 
         const section = document.createElement("section");
         section.className = "group-section";
@@ -810,7 +979,16 @@
         const roomList = document.createElement("div");
         roomList.className = "room-list";
 
+        let hasRoom = false;
+
         rooms.forEach((room) => {
+          if (
+            currentRoomSearch &&
+            !room.name.includes(currentRoomSearch)
+          ) {
+            return;
+          }
+
           const card = document.createElement("div");
           card.className = "room-card";
           card.dataset.roomId = room.id;
@@ -867,7 +1045,18 @@
           const courseRow = document.createElement("div");
           courseRow.className = "course-row";
 
+          let hasVisibleCourse = false;
+
           room.courses.forEach((course, idx) => {
+            if (
+              currentStatusFilter !== "all" &&
+              course.state !== currentStatusFilter
+            ) {
+              return;
+            }
+
+            hasVisibleCourse = true;
+
             const cell = document.createElement("div");
             cell.className = "course-cell";
             cell.dataset.courseIndex = String(idx);
@@ -895,10 +1084,21 @@
             btn.dataset.courseIndex = String(idx);
             cell.appendChild(btn);
 
-            const waitDiv = document.createElement("div");
+            const infoLine = document.createElement("div");
+            infoLine.className = "info-line";
+
+            const wLabel = document.createElement("span");
+            wLabel.className = "w-label";
+            const wCount = course.wCount || 0;
+            wLabel.textContent = wCount > 0 ? `[W×${wCount}]` : "";
+            infoLine.appendChild(wLabel);
+
+            const waitDiv = document.createElement("span");
             waitDiv.className = "wait-time";
             waitDiv.textContent = course.waitLabel || "";
-            cell.appendChild(waitDiv);
+            infoLine.appendChild(waitDiv);
+
+            cell.appendChild(infoLine);
 
             const staffDiv = document.createElement("div");
             staffDiv.className = "staff-label";
@@ -912,19 +1112,30 @@
             allergyDiv.addEventListener("click", () => {
               handleAllergyClick(room.id, idx);
             });
+            wLabel.addEventListener("click", () => {
+              handleWClick(room.id, idx);
+            });
             waitDiv.addEventListener("click", () => {
               handleWaitTimeClick(room.id, idx);
+            });
+            staffDiv.addEventListener("click", () => {
+              handleStaffClick(room.id, idx);
             });
 
             courseRow.appendChild(cell);
           });
 
+          if (!hasVisibleCourse) return;
+
           card.appendChild(courseRow);
           roomList.appendChild(card);
+          hasRoom = true;
         });
 
-        section.appendChild(roomList);
-        container.appendChild(section);
+        if (hasRoom) {
+          section.appendChild(roomList);
+          container.appendChild(section);
+        }
       });
     }
 
@@ -932,6 +1143,20 @@
       document.getElementById("undoBtn").addEventListener("click", () => {
         undoLast();
       });
+
+      document
+        .getElementById("statusFilter")
+        .addEventListener("change", (e) => {
+          currentStatusFilter = e.target.value;
+          renderBoard();
+        });
+
+      document
+        .getElementById("roomSearch")
+        .addEventListener("input", (e) => {
+          currentRoomSearch = e.target.value.trim();
+          renderBoard();
+        });
 
       let existingBoard = loadOrderBoard();
       if (existingBoard) {
