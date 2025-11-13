@@ -456,242 +456,163 @@
   // =====================
   // 追加料理
   // =====================
-  function createExtraRow(prev) {
-    const tbody = document.getElementById("extrasBody");
-    const tr = document.createElement("tr");
-    tr.className = "extra-row";
+// ---- 追加料理行 ----
+function createExtraRow(prev) {
+  const tbody = document.getElementById("extrasBody");
+  const tr = document.createElement("tr");
+  tr.className = "extra-row";
 
-    // 品名
-    const tdName = document.createElement("td");
-    const inputName = document.createElement("input");
-    inputName.type = "text";
-    inputName.className = "extra-name";
-    inputName.style.width = "100%";
-    inputName.value = prev && prev.name ? prev.name : "";
-    tdName.appendChild(inputName);
-    tr.appendChild(tdName);
+  // 品名
+  const tdName = document.createElement("td");
+  const inputName = document.createElement("input");
+  inputName.type = "text";
+  inputName.className = "extra-name";
+  inputName.style.width = "100%";
+  inputName.value = prev && prev.name ? prev.name : "";
+  tdName.appendChild(inputName);
+  tr.appendChild(tdName);
 
-    // 数量
-    const tdQty = document.createElement("td");
-    const selQty = document.createElement("select");
-    selQty.className = "extra-qty";
-    ["1", "2", "3", "custom"].forEach((v) => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v === "custom" ? "カスタマイズ" : v;
-      selQty.appendChild(opt);
-    });
-    const inputQtyCustom = document.createElement("input");
-    inputQtyCustom.type = "text";
-    inputQtyCustom.className = "extra-qty-custom";
-    inputQtyCustom.placeholder = "例：1皿を2名で";
-    inputQtyCustom.style.display = "none";
-    selQty.addEventListener("change", () => {
-      if (selQty.value === "custom") {
-        inputQtyCustom.style.display = "inline-block";
-      } else {
-        inputQtyCustom.style.display = "none";
-      }
-    });
-    if (prev && prev.qty) {
-      selQty.value = prev.qty;
-      if (prev.qty === "custom") {
-        inputQtyCustom.style.display = "inline-block";
-        inputQtyCustom.value = prev.qtyCustom || "";
-      }
+  // 数量
+  const tdQty = document.createElement("td");
+  const selQty = document.createElement("select");
+  selQty.className = "extra-qty";
+  ["1", "2", "3", "custom"].forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v === "custom" ? "カスタマイズ" : v;
+    selQty.appendChild(opt);
+  });
+  const inputQtyCustom = document.createElement("input");
+  inputQtyCustom.type = "text";
+  inputQtyCustom.className = "extra-qty-custom";
+  inputQtyCustom.placeholder = "例：1皿を2名で";
+  inputQtyCustom.style.display = "none";
+  selQty.addEventListener("change", () => {
+    if (selQty.value === "custom") {
+      inputQtyCustom.style.display = "inline-block";
     } else {
-      selQty.value = "1";
+      inputQtyCustom.style.display = "none";
     }
-    tdQty.appendChild(selQty);
-    tdQty.appendChild(inputQtyCustom);
-    tr.appendChild(tdQty);
-
-    // 挿入位置
-    const tdPos = document.createElement("td");
-    const selPos = document.createElement("select");
-    selPos.className = "extra-position";
-    const positions = [
-      { value: "before-kasai", label: "果菜盛りの前" },
-      { value: "before-mushi", label: "蒸物の前" },
-      { value: "before-age", label: "揚物の前" },
-      { value: "before-ni", label: "煮物の前" },
-      { value: "before-gohan", label: "ご飯の前" },
-      { value: "before-amami", label: "甘味の前" }
-    ];
-    positions.forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p.value;
-      opt.textContent = p.label;
-      selPos.appendChild(opt);
-    });
-    selPos.value = prev && prev.position ? prev.position : "before-kasai";
-    tdPos.appendChild(selPos);
-    tr.appendChild(tdPos);
-
-    // 部屋指定
-    const tdRooms = document.createElement("td");
-    const inputRooms = document.createElement("input");
-    inputRooms.type = "text";
-    inputRooms.className = "extra-rooms";
-    inputRooms.style.width = "100%";
-    if (prev && Array.isArray(prev.targetRooms) && prev.targetRooms.length) {
-      inputRooms.value = prev.targetRooms.join("/");
+  });
+  if (prev && prev.qty) {
+    selQty.value = prev.qty;
+    if (prev.qty === "custom") {
+      inputQtyCustom.style.display = "inline-block";
+      inputQtyCustom.value = prev.qtyCustom || "";
     }
-    tdRooms.appendChild(inputRooms);
-    tr.appendChild(tdRooms);
+  } else {
+    selQty.value = "1";
+  }
+  tdQty.appendChild(selQty);
+  tdQty.appendChild(inputQtyCustom);
+  tr.appendChild(tdQty);
 
-    // 操作
-    const tdOp = document.createElement("td");
-    const btnDel = document.createElement("button");
-    btnDel.type = "button";
-    btnDel.className = "btn btn-ghost";
-    btnDel.textContent = "削除";
-    btnDel.addEventListener("click", () => {
-      tbody.removeChild(tr);
-    });
-    tdOp.appendChild(btnDel);
-    tr.appendChild(tdOp);
+  // 挿入位置
+  const tdPos = document.createElement("td");
+  const selPos = document.createElement("select");
+  selPos.className = "extra-position";
+  const positions = [
+    { value: "before-kasai", label: "果菜盛りの前" },
+    { value: "before-mushi", label: "蒸物の前" },
+    { value: "before-age", label: "揚物の前" },
+    { value: "before-ni", label: "煮物の前" },
+    { value: "before-gohan", label: "ご飯の前" },
+    { value: "before-amami", label: "甘味の前" }
+  ];
+  positions.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.value;
+    opt.textContent = p.label;
+    selPos.appendChild(opt);
+  });
+  selPos.value = prev && prev.position ? prev.position : "before-kasai";
+  tdPos.appendChild(selPos);
+  tr.appendChild(tdPos);
 
-    tbody.appendChild(tr);
+  // 部屋指定：テキスト → 複数選択セレクト
+  const tdRooms = document.createElement("td");
+  const selRooms = document.createElement("select");
+  selRooms.className = "extra-rooms";
+  selRooms.multiple = true;
+  selRooms.size = 4;
+
+  const roomNames = getAllRoomNames();
+  const prevRooms =
+    prev && Array.isArray(prev.targetRooms) ? prev.targetRooms : [];
+
+  // 「全ての部屋」ダミー
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "（全ての部屋）";
+  selRooms.appendChild(optAll);
+
+  roomNames.forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    if (prevRooms.includes(name)) {
+      opt.selected = true;
+    }
+    selRooms.appendChild(opt);
+  });
+
+  // 保存データが無い場合は「全ての部屋」を選択状態に
+  if (!prevRooms.length) {
+    optAll.selected = true;
   }
 
-  // =====================
-  // アレルギータグ
-  // =====================
-  function fillAllergyRoomOptions(selectEl) {
-    const names = getAllRoomNames();
-    selectEl.innerHTML = "";
-    const optEmpty = document.createElement("option");
-    optEmpty.value = "";
-    optEmpty.textContent = "（部屋を選択）";
-    selectEl.appendChild(optEmpty);
+  tdRooms.appendChild(selRooms);
+  tr.appendChild(tdRooms);
+
+  // 操作
+  const tdOp = document.createElement("td");
+  const btnDel = document.createElement("button");
+  btnDel.type = "button";
+  btnDel.className = "btn btn-ghost";
+  btnDel.textContent = "削除";
+  btnDel.addEventListener("click", () => {
+    tbody.removeChild(tr);
+  });
+  tdOp.appendChild(btnDel);
+  tr.appendChild(tdOp);
+
+  tbody.appendChild(tr);
+}
+// 追加料理の「部屋指定」セレクトを、現在の部屋一覧で更新
+function updateExtraRoomOptionsAll() {
+  const names = getAllRoomNames(); // すでにある関数
+
+  document.querySelectorAll("select.extra-rooms").forEach((sel) => {
+    // いま選ばれている部屋を退避
+    const selectedValues = Array.from(sel.options)
+      .filter((o) => o.selected && o.value)
+      .map((o) => o.value);
+
+    sel.innerHTML = "";
+
+    const optAll = document.createElement("option");
+    optAll.value = "";
+    optAll.textContent = "（全ての部屋）";
+    sel.appendChild(optAll);
+
     names.forEach((name) => {
       const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name;
-      selectEl.appendChild(opt);
+      sel.appendChild(opt);
     });
-  }
 
-  function updateAllergyRoomOptionsAll() {
-    const selects = document.querySelectorAll(".allergy-room");
-    const names = getAllRoomNames();
-    selects.forEach((sel) => {
-      const current = sel.value;
-      sel.innerHTML = "";
-      const optEmpty = document.createElement("option");
-      optEmpty.value = "";
-      optEmpty.textContent = "（部屋を選択）";
-      sel.appendChild(optEmpty);
-      names.forEach((name) => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
+    if (!selectedValues.length) {
+      optAll.selected = true;
+    } else {
+      Array.from(sel.options).forEach((o) => {
+        if (selectedValues.includes(o.value)) {
+          o.selected = true;
+        }
       });
-      if (names.includes(current)) {
-        sel.value = current;
-      } else {
-        sel.value = "";
-      }
-    });
-  }
-
-  // 指定した部屋のプランに応じて、その行のコース候補を埋める
-  function fillAllergyCourseOptionsForRoom(selectEl, roomName) {
-    selectEl.innerHTML = "";
-    const optEmpty = document.createElement("option");
-    optEmpty.value = "";
-    optEmpty.textContent = "（コースを選択）";
-    selectEl.appendChild(optEmpty);
-
-    if (!roomName) return;
-
-    const planKey = getPlanForRoom(roomName);
-    const labels =
-      (planKey && PLAN_COURSES[planKey]) || ALLERGY_COURSE_LABELS;
-
-    labels.forEach((label) => {
-      const opt = document.createElement("option");
-      opt.value = label;
-      opt.textContent = label;
-      selectEl.appendChild(opt);
-    });
-  }
-
-  // ある部屋に対する全タグ行のコース候補を更新（プラン変更時に使用）
-  function updateAllergyCourseOptionsForRoom(roomName) {
-    document.querySelectorAll(".allergy-row").forEach((tr) => {
-      const selRoom = tr.querySelector(".allergy-room");
-      const selCourse = tr.querySelector(".allergy-course");
-      if (!selRoom || !selCourse) return;
-      if (selRoom.value !== roomName) return;
-      const prev = selCourse.value;
-      fillAllergyCourseOptionsForRoom(selCourse, roomName);
-      if (
-        prev &&
-        Array.from(selCourse.options).some((opt) => opt.value === prev)
-      ) {
-        selCourse.value = prev;
-      }
-    });
-  }
-
-  function createAllergyTagRow(prev) {
-    const tbody = document.getElementById("allergyTagBody");
-    const tr = document.createElement("tr");
-    tr.className = "allergy-row";
-
-    // 部屋
-    const tdRoom = document.createElement("td");
-    const selRoom = document.createElement("select");
-    selRoom.className = "allergy-room";
-    fillAllergyRoomOptions(selRoom);
-    if (prev && prev.roomName) selRoom.value = prev.roomName;
-    tdRoom.appendChild(selRoom);
-    tr.appendChild(tdRoom);
-
-    // コース
-    const tdCourse = document.createElement("td");
-    const selCourse = document.createElement("select");
-    selCourse.className = "allergy-course";
-    fillAllergyCourseOptionsForRoom(selCourse, selRoom.value || "");
-    if (prev && prev.courseLabel) {
-      selCourse.value = prev.courseLabel;
     }
-    // 部屋を切り替えたら、その部屋のプランに応じて候補だけ出す
-    selRoom.addEventListener("change", () => {
-      fillAllergyCourseOptionsForRoom(selCourse, selRoom.value || "");
-    });
-    tdCourse.appendChild(selCourse);
-    tr.appendChild(tdCourse);
-
-    // ラベル
-    const tdLabel = document.createElement("td");
-    const inputLabel = document.createElement("input");
-    inputLabel.type = "text";
-    inputLabel.className = "allergy-label";
-    inputLabel.maxLength = 8;
-    inputLabel.style.width = "100%";
-    inputLabel.placeholder = "例：1名ｴﾋﾞNG";
-    inputLabel.value = prev && prev.label ? prev.label : "";
-    tdLabel.appendChild(inputLabel);
-    tr.appendChild(tdLabel);
-
-    // 操作
-    const tdOp = document.createElement("td");
-    const btnDel = document.createElement("button");
-    btnDel.type = "button";
-    btnDel.className = "btn btn-ghost";
-    btnDel.textContent = "削除";
-    btnDel.addEventListener("click", () => {
-      tbody.removeChild(tr);
-    });
-    tdOp.appendChild(btnDel);
-    tr.appendChild(tdOp);
-
-    tbody.appendChild(tr);
-  }
+  });
+}
 
   function collectAllergyTags() {
     const tags = [];
@@ -781,34 +702,37 @@
     return rooms;
   }
 
-  function collectExtras() {
-    const extras = [];
-    document.querySelectorAll(".extra-row").forEach((tr) => {
-      const name = tr.querySelector(".extra-name").value.trim();
-      if (!name) return;
+function collectExtras() {
+  const extras = [];
+  document.querySelectorAll(".extra-row").forEach((tr) => {
+    const name = tr.querySelector(".extra-name").value.trim();
+    if (!name) return;
 
-      const qtySel = tr.querySelector(".extra-qty");
-      const qty = qtySel.value;
-      const qtyCustomInput = tr.querySelector(".extra-qty-custom");
-      const qtyCustom = qty === "custom" ? qtyCustomInput.value.trim() : "";
+    const qtySel = tr.querySelector(".extra-qty");
+    const qty = qtySel.value;
+    const qtyCustomInput = tr.querySelector(".extra-qty-custom");
+    const qtyCustom = qty === "custom" ? qtyCustomInput.value.trim() : "";
 
-      const position = tr.querySelector(".extra-position").value;
-      const roomsRaw = tr.querySelector(".extra-rooms").value.trim();
-      let targetRooms = [];
-      if (roomsRaw) {
-        targetRooms = roomsRaw.split(/[\/／,、\s]+/).filter(Boolean);
-      }
+    const position = tr.querySelector(".extra-position").value;
 
-      extras.push({
-        name,
-        qty,
-        qtyCustom,
-        position,
-        targetRooms
-      });
+    const selRooms = tr.querySelector("select.extra-rooms");
+    let targetRooms = [];
+    if (selRooms) {
+      targetRooms = Array.from(selRooms.options)
+        .filter((o) => o.selected && o.value) // value="" は「全ての部屋」
+        .map((o) => o.value);
+    }
+
+    extras.push({
+      name,
+      qty,
+      qtyCustom,
+      position,
+      targetRooms
     });
-    return extras;
-  }
+  });
+  return extras;
+}
 
   function saveAndGo() {
     const data = {
@@ -861,6 +785,7 @@
       createAllergyTagRow(null);
     }
     updateAllergyRoomOptionsAll();
+    updateExtraRoomOptionsAll();
 
     // スタッフ
     initStaffs(saved);
@@ -883,11 +808,15 @@
         createRoomRow(name, true, null);
         input.value = "";
         updateAllergyRoomOptionsAll();
+        updateExtraRoomOptionsAll();
       });
 
-    document
-      .getElementById("addExtraRowBtn")
-      .addEventListener("click", () => createExtraRow(null));
+  document
+  .getElementById("addExtraRowBtn")
+  .addEventListener("click", () => {
+    createExtraRow(null);
+    updateExtraRoomOptionsAll(); // ← ここをコールバックの中へ
+  });
 
     document
       .getElementById("addAllergyTagRowBtn")
