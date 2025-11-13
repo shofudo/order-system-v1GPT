@@ -95,15 +95,21 @@
       border-radius: 6px;
       padding: 4px 6px;
       border: 1px solid #e0e0e0;
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
     }
 
-    .room-header {
+    .room-left {
+      flex: 0 0 140px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 4px;
-      flex-wrap: wrap;
-      margin-bottom: 2px;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .room-right {
+      flex: 1 1 auto;
+      overflow-x: auto;
     }
 
     .room-title {
@@ -125,28 +131,23 @@
       font-size: 15px;
       font-weight: bold;
     }
-    .room-memo {
-      font-size: 11px;
-      color: #555;
-    }
-
-    .room-meta {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      flex-wrap: wrap;
-      font-size: 11px;
-    }
     .room-plan-label {
       padding: 2px 8px;
       border-radius: 999px;
       background: #f0f0f5;
       font-size: 11px;
     }
+    .room-memo {
+      font-size: 11px;
+      color: #555;
+    }
+
     .tag {
       padding: 2px 6px;
       border-radius: 999px;
       font-size: 10px;
+      display: inline-block;
+      margin-top: 1px;
     }
     .tag-cake {
       background: #ffe3ec;
@@ -237,13 +238,22 @@
     }
     .wait-time {
       cursor: pointer;
-      min-width: 40px;
+      min-width: 32px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #fff7d6;
+      border-radius: 8px;
+      padding: 1px 4px;
     }
     .staff-label {
       font-size: 11px;
       margin-top: 1px;
       min-height: 1.2em;
       cursor: pointer;
+    }
+
+    .dessert-tags {
+      margin-top: 1px;
     }
 
     /* モーダル */
@@ -325,6 +335,7 @@
         </select>
       </label>
       <input id="roomSearch" type="text" placeholder="部屋名検索" />
+      <button id="clearBtn" class="btn-ghost">全クリア（本日分）</button>
       <button id="undoBtn" class="btn-ghost">Undo（1つ戻す）</button>
     </div>
   </div>
@@ -453,6 +464,28 @@
       } catch (e) {
         console.error("undo parse error", e);
       }
+    }
+
+    function handleClearAll() {
+      if (!board) return;
+      const ok = window.confirm(
+        "本日の進行状況をすべて『未』に戻します。\n人数W・提供時間・スタッフもクリアされます（アレルギー情報は残ります）。よろしいですか？"
+      );
+      if (!ok) return;
+      pushHistory();
+      GROUP_TIMES.forEach((t) => {
+        const rooms = board.groups[t] || [];
+        rooms.forEach((room) => {
+          room.courses.forEach((course) => {
+            course.state = "未";
+            course.wCount = 0;
+            course.waitLabel = "";
+            course.staff = "";
+          });
+        });
+      });
+      saveBoard();
+      renderBoard();
     }
 
     function mapPlanLabel(planKey) {
@@ -608,7 +641,7 @@
         board.groups[time].push(roomObj);
       });
 
-      // 部屋の並び順：固定順 → その他は五十音
+      // 部屋の並び順：指定順 → その他は五十音
       GROUP_TIMES.forEach((t) => {
         board.groups[t].sort((a, b) => {
           const ia = ROOM_ORDER.indexOf(a.name);
@@ -642,6 +675,16 @@
       const hh = String(h).padStart(2, "0");
       const mm = String(m).padStart(2, "0");
       return `${hh}:${mm}`;
+    }
+
+    function waitDisplayLabel(raw) {
+      if (!raw) return "";
+      if (raw === "声がけ") return "声";
+      if (raw.includes(":")) {
+        const parts = raw.split(":");
+        return parts[1]; // 分だけ
+      }
+      return raw;
     }
 
     // === モーダル ===
@@ -847,7 +890,7 @@
       }
     });
 
-    // === ハンドラ ===
+    // === ボタンハンドラ ===
     function handleCourseButtonClick(roomId, courseIndex) {
       const found = findRoomById(roomId);
       if (!found) return;
@@ -1014,10 +1057,7 @@
         let hasRoom = false;
 
         rooms.forEach((room) => {
-          if (
-            currentRoomSearch &&
-            !room.name.includes(currentRoomSearch)
-          ) {
+          if (currentRoomSearch && !room.name.includes(currentRoomSearch)) {
             return;
           }
 
@@ -1025,8 +1065,9 @@
           card.className = "room-card";
           card.dataset.roomId = room.id;
 
-          const header = document.createElement("div");
-          header.className = "room-header";
+          // 左カラム（部屋情報）
+          const left = document.createElement("div");
+          left.className = "room-left";
 
           const titleDiv = document.createElement("div");
           titleDiv.className = "room-title";
@@ -1046,33 +1087,18 @@
           planSpan.textContent = mapPlanLabel(room.plan);
           titleDiv.appendChild(planSpan);
 
+          left.appendChild(titleDiv);
+
           if (room.memo) {
-            const memoSpan = document.createElement("span");
-            memoSpan.className = "room-memo";
-            memoSpan.textContent = room.memo;
-            titleDiv.appendChild(memoSpan);
+            const memoDiv = document.createElement("div");
+            memoDiv.className = "room-memo";
+            memoDiv.textContent = room.memo;
+            left.appendChild(memoDiv);
           }
 
-          const metaDiv = document.createElement("div");
-          metaDiv.className = "room-meta";
-
-          if (room.cake) {
-            const cakeSpan = document.createElement("span");
-            cakeSpan.className = "tag tag-cake";
-            cakeSpan.textContent = "ケーキ";
-            metaDiv.appendChild(cakeSpan);
-          }
-          if (room.plate) {
-            const plateSpan = document.createElement("span");
-            plateSpan.className = "tag tag-plate";
-            plateSpan.textContent = "プレート";
-            metaDiv.appendChild(plateSpan);
-          }
-
-          header.appendChild(titleDiv);
-          header.appendChild(metaDiv);
-
-          card.appendChild(header);
+          // 右カラム（コース列）
+          const right = document.createElement("div");
+          right.className = "room-right";
 
           const courseRow = document.createElement("div");
           courseRow.className = "course-row";
@@ -1080,10 +1106,7 @@
           let hasVisibleCourse = false;
 
           room.courses.forEach((course, idx) => {
-            if (
-              currentStatusFilter !== "all" &&
-              course.state !== currentStatusFilter
-            ) {
+            if (currentStatusFilter !== "all" && course.state !== currentStatusFilter) {
               return;
             }
 
@@ -1127,7 +1150,11 @@
 
             const waitDiv = document.createElement("span");
             waitDiv.className = "wait-time";
-            waitDiv.textContent = course.waitLabel || "";
+            const rawWait = course.waitLabel || "";
+            waitDiv.textContent = waitDisplayLabel(rawWait);
+            if (rawWait && rawWait !== waitDiv.textContent) {
+              waitDiv.title = rawWait;
+            }
             infoLine.appendChild(waitDiv);
 
             cell.appendChild(infoLine);
@@ -1136,6 +1163,25 @@
             staffDiv.className = "staff-label";
             staffDiv.textContent = course.staff || "";
             cell.appendChild(staffDiv);
+
+            // ケーキ／プレートは甘味セルに表示
+            if (course.label === "甘味" && (room.cake || room.plate)) {
+              const dessertTags = document.createElement("div");
+              dessertTags.className = "dessert-tags";
+              if (room.cake) {
+                const cakeSpan = document.createElement("span");
+                cakeSpan.className = "tag tag-cake";
+                cakeSpan.textContent = "ケーキ";
+                dessertTags.appendChild(cakeSpan);
+              }
+              if (room.plate) {
+                const plateSpan = document.createElement("span");
+                plateSpan.className = "tag tag-plate";
+                plateSpan.textContent = "プレート";
+                dessertTags.appendChild(plateSpan);
+              }
+              cell.appendChild(dessertTags);
+            }
 
             // イベント登録
             btn.addEventListener("click", () => {
@@ -1159,7 +1205,11 @@
 
           if (!hasVisibleCourse) return;
 
-          card.appendChild(courseRow);
+          right.appendChild(courseRow);
+
+          card.appendChild(left);
+          card.appendChild(right);
+
           roomList.appendChild(card);
           hasRoom = true;
         });
@@ -1176,21 +1226,21 @@
         undoLast();
       });
 
-      document
-        .getElementById("statusFilter")
-        .addEventListener("change", (e) => {
-          currentStatusFilter = e.target.value;
-          renderBoard();
-        });
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        handleClearAll();
+      });
 
-      document
-        .getElementById("roomSearch")
-        .addEventListener("input", (e) => {
-          currentRoomSearch = e.target.value.trim();
-          renderBoard();
-        });
+      document.getElementById("statusFilter").addEventListener("change", (e) => {
+        currentStatusFilter = e.target.value;
+        renderBoard();
+      });
 
-      let existingBoard = loadOrderBoard();
+      document.getElementById("roomSearch").addEventListener("input", (e) => {
+        currentRoomSearch = e.target.value.trim();
+        renderBoard();
+      });
+
+      const existingBoard = loadOrderBoard();
       if (existingBoard) {
         board = existingBoard;
         renderBoard();
