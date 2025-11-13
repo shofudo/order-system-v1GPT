@@ -101,7 +101,7 @@
     }
 
     .room-left {
-      flex: 0 0 140px;
+      flex: 0 0 150px;
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -122,13 +122,13 @@
 
     .room-name {
       font-weight: bold;
-      font-size: 15px;
+      font-size: 18px;
     }
     .room-people {
-      padding: 2px 8px;
+      padding: 2px 10px;
       border-radius: 999px;
       background: #e5f4ff;
-      font-size: 15px;
+      font-size: 18px;
       font-weight: bold;
     }
     .room-plan-label {
@@ -234,12 +234,18 @@
     }
     .w-label {
       cursor: pointer;
-      min-width: 34px;
+      min-width: 38px;
+      font-size: 11px;
+      font-weight: bold;
+      background: #e3f2fd;
+      color: #0b5394;
+      border-radius: 8px;
+      padding: 1px 4px;
     }
     .wait-time {
       cursor: pointer;
-      min-width: 32px;
-      font-size: 12px;
+      min-width: 34px;
+      font-size: 16px;
       font-weight: bold;
       background: #fff7d6;
       border-radius: 8px;
@@ -342,8 +348,9 @@
 
   <h1>Order画面</h1>
   <p class="small-note">
-    通常：未→待→注→提→未 ／ ステーキ・煮物：未→待→肉→注→提→未 ／ 果菜盛り・しゃぶしゃぶ：未→待→提→未。
-    「待」で提供予定時刻、「肉」で人数W、「提」でスタッフを選択。アレルギーは料理名下をタップして入力します。
+    通常：未→待→注→提→未 ／ ステーキ・煮物：未→肉→待→注→提→未（未→肉で時間設定／肉→待でW人数） ／
+    果菜盛り・しゃぶしゃぶ：未→待→提→未。
+    「待」と時間ラベルで提供予定時刻、「肉」とWラベルでW人数、「提」とスタッフ名で担当変更。アレルギーは料理名下をタップ。
   </p>
 
   <div id="groupsContainer"></div>
@@ -538,10 +545,10 @@
         return ["未", "待", "提"];
       }
       if (isMeatCourseLabel(course.label)) {
-        // ステーキ・煮物
-        return ["未", "待", "肉", "注", "提"];
+        // ステーキ・煮物：未→肉→待→注→提
+        return ["未", "肉", "待", "注", "提"];
       }
-      // 通常
+      // 通常：未→待→注→提
       return ["未", "待", "注", "提"];
     }
 
@@ -693,7 +700,8 @@
       modalBodyEl.innerHTML = "";
 
       const p = document.createElement("p");
-      p.textContent = "焼き加減などの管理用に、人数Wを指定してください。不要な場合は「なし」を選んでください。";
+      p.textContent =
+        "焼き加減などの管理用に、人数Wを指定してください。不要な場合は「なし」を選んでください。";
       modalBodyEl.appendChild(p);
 
       const optionsDiv = document.createElement("div");
@@ -827,11 +835,13 @@
     }
 
     function openAllergyModal(room, course, onSelect, onCancel) {
-      modalTitleEl.textContent = `${room.name}「${course.label}」のアレルギー・苦手食材`;
+      modalTitleEl.textContent =
+        `${room.name}「${course.label}」のアレルギー・苦手食材`;
       modalBodyEl.innerHTML = "";
 
       const p = document.createElement("p");
-      p.textContent = "アレルギー・苦手食材を入力してください。（例：エビNG／ナス苦手）";
+      p.textContent =
+        "アレルギー・苦手食材を入力してください。（例：エビNG／ナス苦手）";
       modalBodyEl.appendChild(p);
 
       const textarea = document.createElement("textarea");
@@ -903,10 +913,13 @@
 
       if (nextState === prevState) return;
 
+      const isMeat = isMeatCourseLabel(course.label);
+
       pushHistory();
       course.state = nextState;
 
-      if (nextState === "待") {
+      if (nextState === "肉") {
+        // ステーキ・煮物：未→肉 のタイミングで時間設定
         openWaitModal(
           found.room,
           course,
@@ -918,18 +931,34 @@
             undoLast();
           }
         );
-      } else if (nextState === "肉") {
-        openWModal(
-          found.room,
-          course,
-          () => {
-            renderBoard();
-            saveBoard();
-          },
-          () => {
-            undoLast();
-          }
-        );
+      } else if (nextState === "待") {
+        if (isMeat) {
+          // ステーキ・煮物：肉→待 でW人数
+          openWModal(
+            found.room,
+            course,
+            () => {
+              renderBoard();
+              saveBoard();
+            },
+            () => {
+              undoLast();
+            }
+          );
+        } else {
+          // 通常・果菜盛り・しゃぶしゃぶ：未→待で時間設定
+          openWaitModal(
+            found.room,
+            course,
+            () => {
+              renderBoard();
+              saveBoard();
+            },
+            () => {
+              undoLast();
+            }
+          );
+        }
       } else if (nextState === "提") {
         openStaffModal(
           found.room,
