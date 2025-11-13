@@ -367,8 +367,43 @@
   </div>
 
   <script>
-    const INDEX_STORAGE_KEY = "orderSystemIndexV1";
-    const ORDER_STORAGE_KEY = "orderSystemBoardV2";
+    // ★ index.html と同じキーで本日の設定データを読む
+const INDEX_STORAGE_KEY = "orderSystemIndexV1";
+
+// ★ index で保存した allergyTags から
+//   「部屋名＋コース名 → ラベル」のマップを作る
+function loadAllergyTagMap() {
+  const raw = localStorage.getItem(INDEX_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    const data = JSON.parse(raw);
+    if (!data.allergyTags || !Array.isArray(data.allergyTags)) return {};
+    const map = {};
+    data.allergyTags.forEach((tag) => {
+      // roomName: 「やまぶき」など
+      // courseLabel: 「吸物」「果菜盛り」など
+      const key = `${tag.roomName}::${tag.courseLabel}`;
+      map[key] = tag.label; // 例：「肉NG」
+    });
+    return map;
+  } catch (e) {
+    console.error("loadAllergyTagMap error", e);
+    return {};
+  }
+}
+
+// ★ 画面描画時に参照する用のキャッシュ
+const ALLERGY_TAG_MAP = loadAllergyTagMap();
+
+// ★ 部屋名＋コース名からラベルを取り出すヘルパー
+function getAllergyLabel(roomName, courseLabel) {
+  const key = `${roomName}::${courseLabel}`;
+  return ALLERGY_TAG_MAP[key] || "";
+}
+
+// ここから従来どおり
+const ORDER_STORAGE_KEY = "orderSystemBoardV2";
+
 
     const PLAN_COURSES = {
       standard: ["吸物", "果菜盛り", "蒸物", "揚物", "煮物", "ご飯", "甘味"],
