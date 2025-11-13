@@ -1150,15 +1150,25 @@
             courseName.textContent = course.label;
             cell.appendChild(courseName);
 
-            const allergyDiv = document.createElement("div");
-            allergyDiv.className = "allergy-note";
-            if (course.allergy) {
-              allergyDiv.textContent = `アレルギー：${course.allergy}`;
-              allergyDiv.classList.add("has-allergy");
-            } else {
-              allergyDiv.textContent = "アレルギー/苦手 →";
-            }
-            cell.appendChild(allergyDiv);
+          const allergyDiv = document.createElement("div");
+allergyDiv.className = "allergy-note";
+
+// ★ index で登録したラベルを取得
+//   room.name でエラーになる場合は、実際に部屋名が入っているプロパティ
+//   （例：room.roomName など）に置き換えてください。
+const tagFromIndex = getAllergyLabel(room.name, course.label);
+
+// 以前の course.allergy を残したい場合はフォールバック
+const displayLabel = tagFromIndex || (course.allergy || "");
+
+// ラベルがあるときだけ表示＆装飾
+allergyDiv.textContent = displayLabel;
+if (displayLabel) {
+  allergyDiv.classList.add("has-allergy");
+}
+
+cell.appendChild(allergyDiv);
+
 
             const btn = document.createElement("button");
             btn.type = "button";
