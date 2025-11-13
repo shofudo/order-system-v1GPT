@@ -2,10 +2,958 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Order画面（仮）</title>
+  <title>Order画面 - オーダーシステム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f8;
+      margin: 0;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 4px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .link-back {
+      font-size: 14px;
+      text-decoration: none;
+      color: #2c7be5;
+    }
+    .link-back:hover {
+      text-decoration: underline;
+    }
+    .btn-ghost {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #ccc;
+      background: #f8f8f8;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-ghost:hover {
+      background: #ececec;
+    }
+    .small-note {
+      font-size: 12px;
+      color: #555;
+      margin: 0 0 8px;
+    }
+
+    section.group-section {
+      background: #ffffff;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .room-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .room-card {
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .room-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+
+    .room-name {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .room-people {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5f4ff;
+      font-size: 12px;
+    }
+    .room-memo {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .room-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+    .room-plan-label {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f0f0f5;
+    }
+    .tag {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .tag-cake {
+      background: #ffe3ec;
+      color: #a61e4d;
+    }
+    .tag-plate {
+      background: #e5d5ff;
+      color: #5f3dc4;
+    }
+
+    .course-row {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding-top: 4px;
+    }
+
+    .course-cell {
+      flex: 0 0 auto;
+      width: 90px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .course-name {
+      font-weight: bold;
+      margin-bottom: 2px;
+      min-height: 1.4em;
+    }
+
+    .course-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      font-size: 14px;
+      margin: 2px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .course-btn.state-未 {
+      background: #e0e0e0;
+      color: #333;
+    }
+    .course-btn.state-待 {
+      background: #ffe4b3;
+      color: #7f4e00;
+    }
+    .course-btn.state-注 {
+      background: #b3e5ff;
+      color: #004b7f;
+    }
+    .course-btn.state-提 {
+      background: #b2f2bb;
+      color: #1b5e20;
+    }
+
+    .allergy-note {
+      font-size: 10px;
+      min-height: 1.4em;
+      cursor: pointer;
+      color: #666;
+    }
+    .allergy-note.has-allergy {
+      color: #c0392b;
+      font-weight: bold;
+    }
+
+    .wait-time {
+      font-size: 12px;
+      margin-top: 2px;
+      cursor: pointer;
+      min-height: 1.2em;
+    }
+    .staff-label {
+      font-size: 12px;
+      margin-top: 2px;
+      min-height: 1.2em;
+    }
+
+    /* モーダル */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .overlay.show {
+      display: flex;
+    }
+    .modal {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 340px;
+      width: 90%;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+    .modal h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+    .modal-body {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .modal-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: #2c7be5;
+      border: none;
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background: #1b64c7;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 14px;
+      padding: 6px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Order画面（これから作成）</h1>
-  <p>indexで保存したデータをここに表示する予定です。</p>
+  <div class="top-bar">
+    <a href="index.html" class="link-back">← 本日の設定に戻る</a>
+    <div>
+      <button id="undoBtn" class="btn-ghost">Undo（1つ戻す）</button>
+    </div>
+  </div>
+  <h1>Order画面</h1>
+  <p class="small-note">
+    ◯ボタンで進行管理 / 「待」にした直後に提供予定時刻を設定 / 「提」にした直後にスタッフ選択 /
+    アレルギーは料理名の下の表示をタップして入力できます。
+  </p>
+
+  <div id="groupsContainer"></div>
+
+  <!-- モーダル -->
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody" class="modal-body"></div>
+      <div class="modal-actions">
+        <button type="button" id="modalCancel" class="btn-ghost">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INDEX_STORAGE_KEY = "orderSystemIndexV1";
+    const ORDER_STORAGE_KEY = "orderSystemBoardV1";
+
+    const PLAN_COURSES = {
+      standard: ["吸物", "果菜盛り", "蒸物", "揚物", "煮物", "ご飯", "甘味"],
+      wagyu: ["吸物", "果菜盛り", "すき焼き", "フライ", "ステーキ", "ご飯", "甘味"],
+      steak: ["吸物", "果菜盛り", "蒸物", "揚物", "ステーキ", "ご飯", "甘味"],
+      shabu: ["吸物", "果菜盛り", "しゃぶしゃぶ", "蒸物", "揚物", "ご飯", "甘味"],
+      renpaku: ["茶碗蒸し", "牛たたき", "焼物", "小鉢", "揚物", "ご飯", "甘味"]
+    };
+
+    const SIMPLE_FLOW_LABELS = new Set(["果菜盛り", "しゃぶしゃぶ"]);
+
+    const GROUP_TIMES = ["18:00", "18:30", "19:00"];
+
+    let board = null;
+    let historyStack = [];
+
+    const overlayEl = document.getElementById("overlay");
+    const modalTitleEl = document.getElementById("modalTitle");
+    const modalBodyEl = document.getElementById("modalBody");
+    const modalCancelBtn = document.getElementById("modalCancel");
+
+    let modalOnCancel = null; // コールバック
+
+    function getTodayKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function loadIndexData() {
+      const raw = localStorage.getItem(INDEX_STORAGE_KEY);
+      if (!raw) return null;
+      try {
+        const data = JSON.parse(raw);
+        if (!data.date || data.date !== getTodayKey()) {
+          return null;
+        }
+        return data;
+      } catch (e) {
+        console.error("loadIndexData error", e);
+        return null;
+      }
+    }
+
+    function loadOrderBoard() {
+      const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+      if (!raw) return null;
+      try {
+        const data = JSON.parse(raw);
+        if (!data.date || data.date !== getTodayKey()) {
+          return null;
+        }
+        return data;
+      } catch (e) {
+        console.error("loadOrderBoard error", e);
+        return null;
+      }
+    }
+
+    function saveBoard() {
+      if (!board) return;
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(board));
+    }
+
+    function pushHistory() {
+      if (!board) return;
+      historyStack.push(JSON.stringify(board));
+      if (historyStack.length > 50) {
+        historyStack.shift();
+      }
+    }
+
+    function undoLast() {
+      if (!historyStack.length) {
+        alert("戻せる操作がありません。");
+        return;
+      }
+      const last = historyStack.pop();
+      try {
+        board = JSON.parse(last);
+        renderBoard();
+        saveBoard();
+      } catch (e) {
+        console.error("undo parse error", e);
+      }
+    }
+
+    function mapPlanLabel(planKey) {
+      switch (planKey) {
+        case "standard":
+          return "スタンダード";
+        case "wagyu":
+          return "和牛懐石";
+        case "steak":
+          return "ステーキ";
+        case "shabu":
+          return "しゃぶしゃぶ";
+        case "renpaku":
+          return "連泊";
+        default:
+          return planKey;
+      }
+    }
+
+    function mapPositionToAnchorLabel(position) {
+      switch (position) {
+        case "before-kasai":
+          return "果菜盛り";
+        case "before-mushi":
+          return "蒸物";
+        case "before-age":
+          return "揚物";
+        case "before-ni":
+          return "煮物";
+        case "before-gohan":
+          return "ご飯";
+        case "before-amami":
+          return "甘味";
+        default:
+          return null;
+      }
+    }
+
+    function buildBaseCourses(planKey) {
+      const labels = PLAN_COURSES[planKey] || [];
+      return labels.map((label, idx) => ({
+        id: `${planKey}-${idx}-${label}`,
+        label,
+        isSimpleFlow: SIMPLE_FLOW_LABELS.has(label),
+        isExtra: false,
+        state: "未",
+        waitLabel: "",
+        allergy: "",
+        staff: ""
+      }));
+    }
+
+    function extraDisplayName(extra) {
+      const name = extra.name;
+      if (extra.qty === "1") return name;
+      if (extra.qty === "2" || extra.qty === "3") {
+        return `${name}（${extra.qty}）`;
+      }
+      if (extra.qty === "custom") {
+        if (extra.qtyCustom && extra.qtyCustom.trim() !== "") {
+          return `${name}（${extra.qtyCustom.trim()}）`;
+        }
+        return `${name}（カスタム）`;
+      }
+      return name;
+    }
+
+    function insertExtrasIntoCourses(courses, extras, roomName) {
+      if (!Array.isArray(extras)) return courses;
+      const result = courses.slice();
+
+      extras.forEach((ex, idx) => {
+        if (!ex.name) return;
+        if (Array.isArray(ex.targetRooms) && ex.targetRooms.length > 0) {
+          if (!ex.targetRooms.includes(roomName)) return;
+        }
+
+        const label = extraDisplayName(ex);
+        const extraCourse = {
+          id: `extra-${idx}-${roomName}`,
+          label,
+          isSimpleFlow: false, // 追加料理は通常フロー
+          isExtra: true,
+          state: "未",
+          waitLabel: "",
+          allergy: "",
+          staff: ""
+        };
+
+        const anchorLabel = mapPositionToAnchorLabel(ex.position);
+        let insertIndex = 0;
+        if (anchorLabel) {
+          const idxFound = result.findIndex((c) => c.label === anchorLabel);
+          insertIndex = idxFound >= 0 ? idxFound : 0;
+        }
+        result.splice(insertIndex, 0, extraCourse);
+      });
+
+      return result;
+    }
+
+    function buildBoardFromIndex(indexData) {
+      const board = {
+        date: indexData.date,
+        staffs: indexData.staffs || [],
+        groups: {
+          "18:00": [],
+          "18:30": [],
+          "19:00": []
+        }
+      };
+
+      (indexData.rooms || []).forEach((room, idx) => {
+        if (!room.enabled) return;
+        const time = GROUP_TIMES.includes(room.time) ? room.time : "18:00";
+
+        let courses = buildBaseCourses(room.plan || "standard");
+        courses = insertExtrasIntoCourses(courses, indexData.extras || [], room.name);
+
+        const roomObj = {
+          id: `room-${idx}`,
+          name: room.name,
+          peopleDisplay: room.peopleDisplay || "",
+          memo: room.memo || "",
+          time,
+          plan: room.plan || "standard",
+          cake: !!room.cake,
+          plate: !!room.plate,
+          courses
+        };
+
+        board.groups[time].push(roomObj);
+      });
+
+      GROUP_TIMES.forEach((t) => {
+        board.groups[t].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+      });
+
+      return board;
+    }
+
+    function findRoomById(roomId) {
+      for (const time of GROUP_TIMES) {
+        const group = board.groups[time] || [];
+        const idx = group.findIndex((r) => r.id === roomId);
+        if (idx >= 0) {
+          return { room: group[idx], groupKey: time, index: idx };
+        }
+      }
+      return null;
+    }
+
+    function formatNowPlusMinutesLabel(minutes) {
+      const now = new Date();
+      const m = now.getMinutes() + minutes;
+      const h = now.getHours() + Math.floor(m / 60);
+      const newM = m % 60;
+      const hh = String(h).padStart(2, "0");
+      const mm = String(newM).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    function openWaitModal(room, course, onSelect, onCancel) {
+      modalTitleEl.textContent = `${room.name}「${course.label}」の提供予定時刻`;
+      modalBodyEl.innerHTML = "";
+
+      const p = document.createElement("p");
+      p.textContent = "何分後に提供予定かを選択してください。";
+      modalBodyEl.appendChild(p);
+
+      const optionsDiv = document.createElement("div");
+      optionsDiv.className = "modal-options";
+
+      const options = [
+        { label: "+3", minutes: 3 },
+        { label: "+5", minutes: 5 },
+        { label: "+10", minutes: 10 },
+        { label: "+15", minutes: 15 },
+        { label: "+20", minutes: 20 },
+        { label: "+25", minutes: 25 },
+        { label: "声がけ", minutes: null }
+      ];
+
+      options.forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-ghost";
+        btn.textContent = opt.label;
+        btn.addEventListener("click", () => {
+          if (opt.minutes == null) {
+            course.waitLabel = "声がけ";
+          } else {
+            course.waitLabel = formatNowPlusMinutesLabel(opt.minutes);
+          }
+          closeModal();
+          if (onSelect) onSelect();
+        });
+        optionsDiv.appendChild(btn);
+      });
+
+      modalBodyEl.appendChild(optionsDiv);
+
+      modalOnCancel = () => {
+        closeModal();
+        if (onCancel) onCancel();
+      };
+
+      overlayEl.classList.add("show");
+    }
+
+    function openStaffModal(room, course, onSelect, onCancel) {
+      modalTitleEl.textContent = `${room.name}「${course.label}」の担当スタッフ`;
+      modalBodyEl.innerHTML = "";
+
+      const p = document.createElement("p");
+      p.textContent = "提供したスタッフを選択してください。";
+      modalBodyEl.appendChild(p);
+
+      const optionsDiv = document.createElement("div");
+      optionsDiv.className = "modal-options";
+
+      const staffList = board.staffs && board.staffs.length ? board.staffs : [];
+
+      staffList.forEach((name) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-ghost";
+        btn.textContent = name;
+        btn.addEventListener("click", () => {
+          course.staff = name;
+          closeModal();
+          if (onSelect) onSelect();
+        });
+        optionsDiv.appendChild(btn);
+      });
+
+      // スタッフ未指定ボタン
+      const noneBtn = document.createElement("button");
+      noneBtn.type = "button";
+      noneBtn.className = "btn-ghost";
+      noneBtn.textContent = "未指定";
+      noneBtn.addEventListener("click", () => {
+        course.staff = "";
+        closeModal();
+        if (onSelect) onSelect();
+      });
+      optionsDiv.appendChild(noneBtn);
+
+      modalBodyEl.appendChild(optionsDiv);
+
+      modalOnCancel = () => {
+        closeModal();
+        if (onCancel) onCancel();
+      };
+
+      overlayEl.classList.add("show");
+    }
+
+    function openAllergyModal(room, course, onSelect, onCancel) {
+      modalTitleEl.textContent = `${room.name}「${course.label}」のアレルギー・苦手食材`;
+      modalBodyEl.innerHTML = "";
+
+      const p = document.createElement("p");
+      p.textContent = "アレルギー・苦手食材を入力してください。（例：エビNG／ナス苦手）";
+      modalBodyEl.appendChild(p);
+
+      const textarea = document.createElement("textarea");
+      textarea.rows = 3;
+      textarea.value = course.allergy || "";
+      modalBodyEl.appendChild(textarea);
+
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "modal-options";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "btn-primary";
+      saveBtn.textContent = "保存する";
+      saveBtn.addEventListener("click", () => {
+        course.allergy = textarea.value.trim();
+        closeModal();
+        if (onSelect) onSelect();
+      });
+      actionsDiv.appendChild(saveBtn);
+
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "btn-ghost";
+      clearBtn.textContent = "クリア";
+      clearBtn.addEventListener("click", () => {
+        course.allergy = "";
+        textarea.value = "";
+        closeModal();
+        if (onSelect) onSelect();
+      });
+      actionsDiv.appendChild(clearBtn);
+
+      modalBodyEl.appendChild(actionsDiv);
+
+      modalOnCancel = () => {
+        closeModal();
+        if (onCancel) onCancel();
+      };
+
+      overlayEl.classList.add("show");
+    }
+
+    function closeModal() {
+      overlayEl.classList.remove("show");
+      modalBodyEl.innerHTML = "";
+      modalTitleEl.textContent = "";
+      modalOnCancel = null;
+    }
+
+    modalCancelBtn.addEventListener("click", () => {
+      if (modalOnCancel) {
+        modalOnCancel();
+      } else {
+        closeModal();
+      }
+    });
+
+    function handleCourseButtonClick(roomId, courseIndex) {
+      const found = findRoomById(roomId);
+      if (!found) return;
+      const course = found.room.courses[courseIndex];
+      const prevState = course.state || "未";
+      const flow = course.isSimpleFlow ? ["未", "待", "提"] : ["未", "待", "注", "提"];
+      let idx = flow.indexOf(prevState);
+      if (idx < 0) idx = 0;
+      const nextState = flow[(idx + 1) % flow.length];
+
+      pushHistory();
+
+      course.state = nextState;
+
+      if (nextState === "待") {
+        openWaitModal(
+          found.room,
+          course,
+          () => {
+            renderBoard();
+            saveBoard();
+          },
+          () => {
+            // キャンセル → 元に戻す
+            undoLast();
+          }
+        );
+      } else if (nextState === "提") {
+        openStaffModal(
+          found.room,
+          course,
+          () => {
+            renderBoard();
+            saveBoard();
+          },
+          () => {
+            undoLast();
+          }
+        );
+      } else {
+        renderBoard();
+        saveBoard();
+      }
+    }
+
+    function handleWaitTimeClick(roomId, courseIndex) {
+      const found = findRoomById(roomId);
+      if (!found) return;
+      const course = found.room.courses[courseIndex];
+
+      pushHistory();
+      openWaitModal(
+        found.room,
+        course,
+        () => {
+          renderBoard();
+          saveBoard();
+        },
+        () => {
+          undoLast();
+        }
+      );
+    }
+
+    function handleAllergyClick(roomId, courseIndex) {
+      const found = findRoomById(roomId);
+      if (!found) return;
+      const course = found.room.courses[courseIndex];
+
+      pushHistory();
+      openAllergyModal(
+        found.room,
+        course,
+        () => {
+          renderBoard();
+          saveBoard();
+        },
+        () => {
+          undoLast();
+        }
+      );
+    }
+
+    function renderBoard() {
+      const container = document.getElementById("groupsContainer");
+      container.innerHTML = "";
+
+      if (!board) {
+        container.innerHTML =
+          '<p class="small-note">本日の設定データがありません。先に「本日の設定」で保存してください。</p>';
+        return;
+      }
+
+      GROUP_TIMES.forEach((time) => {
+        const rooms = board.groups[time] || [];
+        if (!rooms.length) return;
+
+        const section = document.createElement("section");
+        section.className = "group-section";
+
+        const h2 = document.createElement("h2");
+        h2.textContent = `${time} グループ`;
+        section.appendChild(h2);
+
+        const roomList = document.createElement("div");
+        roomList.className = "room-list";
+
+        rooms.forEach((room) => {
+          const card = document.createElement("div");
+          card.className = "room-card";
+          card.dataset.roomId = room.id;
+
+          const header = document.createElement("div");
+          header.className = "room-header";
+
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "room-title";
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "room-name";
+          nameSpan.textContent = room.name;
+          titleDiv.appendChild(nameSpan);
+
+          const peopleSpan = document.createElement("span");
+          peopleSpan.className = "room-people";
+          peopleSpan.textContent = room.peopleDisplay || "";
+          titleDiv.appendChild(peopleSpan);
+
+          if (room.memo) {
+            const memoSpan = document.createElement("span");
+            memoSpan.className = "room-memo";
+            memoSpan.textContent = room.memo;
+            titleDiv.appendChild(memoSpan);
+          }
+
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "room-meta";
+
+          const planSpan = document.createElement("span");
+          planSpan.className = "room-plan-label";
+          planSpan.textContent = mapPlanLabel(room.plan);
+          metaDiv.appendChild(planSpan);
+
+          if (room.cake) {
+            const cakeSpan = document.createElement("span");
+            cakeSpan.className = "tag tag-cake";
+            cakeSpan.textContent = "ケーキ";
+            metaDiv.appendChild(cakeSpan);
+          }
+          if (room.plate) {
+            const plateSpan = document.createElement("span");
+            plateSpan.className = "tag tag-plate";
+            plateSpan.textContent = "プレート";
+            metaDiv.appendChild(plateSpan);
+          }
+
+          header.appendChild(titleDiv);
+          header.appendChild(metaDiv);
+
+          card.appendChild(header);
+
+          const courseRow = document.createElement("div");
+          courseRow.className = "course-row";
+
+          room.courses.forEach((course, idx) => {
+            const cell = document.createElement("div");
+            cell.className = "course-cell";
+            cell.dataset.courseIndex = String(idx);
+
+            const courseName = document.createElement("div");
+            courseName.className = "course-name";
+            courseName.textContent = course.label;
+            cell.appendChild(courseName);
+
+            const allergyDiv = document.createElement("div");
+            allergyDiv.className = "allergy-note";
+            if (course.allergy) {
+              allergyDiv.textContent = `アレルギー：${course.allergy}`;
+              allergyDiv.classList.add("has-allergy");
+            } else {
+              allergyDiv.textContent = "アレルギー/苦手 →";
+            }
+            cell.appendChild(allergyDiv);
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = `course-btn state-${course.state}`;
+            btn.textContent = course.state;
+            btn.dataset.roomId = room.id;
+            btn.dataset.courseIndex = String(idx);
+            cell.appendChild(btn);
+
+            const waitDiv = document.createElement("div");
+            waitDiv.className = "wait-time";
+            waitDiv.textContent = course.waitLabel || "";
+            cell.appendChild(waitDiv);
+
+            const staffDiv = document.createElement("div");
+            staffDiv.className = "staff-label";
+            staffDiv.textContent = course.staff || "";
+            cell.appendChild(staffDiv);
+
+            // イベント
+            btn.addEventListener("click", () => {
+              handleCourseButtonClick(room.id, idx);
+            });
+            allergyDiv.addEventListener("click", () => {
+              handleAllergyClick(room.id, idx);
+            });
+            waitDiv.addEventListener("click", () => {
+              handleWaitTimeClick(room.id, idx);
+            });
+
+            courseRow.appendChild(cell);
+          });
+
+          card.appendChild(courseRow);
+          roomList.appendChild(card);
+        });
+
+        section.appendChild(roomList);
+        container.appendChild(section);
+      });
+    }
+
+    function init() {
+      document.getElementById("undoBtn").addEventListener("click", () => {
+        undoLast();
+      });
+
+      let existingBoard = loadOrderBoard();
+      if (existingBoard) {
+        board = existingBoard;
+        renderBoard();
+        return;
+      }
+
+      const indexData = loadIndexData();
+      if (!indexData) {
+        const container = document.getElementById("groupsContainer");
+        container.innerHTML =
+          '<p class="small-note">本日の設定データが見つかりませんでした。先に「本日の設定」で保存してください。</p>';
+        return;
+      }
+
+      board = buildBoardFromIndex(indexData);
+      saveBoard();
+      renderBoard();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
