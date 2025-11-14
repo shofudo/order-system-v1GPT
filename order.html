@@ -400,6 +400,73 @@ function getAllergyLabel(roomName, courseLabel) {
   const key = `${roomName}::${courseLabel}`;
   return ALLERGY_TAG_MAP[key] || "";
 }
+// ==== 追加料理 → 「部屋 × コース」のバッジ情報に変換 ====
+
+// 挿入位置の値（例: "ご飯の前"）から、ぶら下げるコース名に変換
+function mapPositionToCourseLabel(position) {
+  switch (position) {
+    case "果菜盛の前":
+    case "果菜盛りの前":
+      return "果菜盛り";
+    case "蒸物の前":
+      return "蒸物";
+    case "揚物の前":
+      return "揚物";
+    case "煮物の前":
+      return "煮物";
+    case "ご飯の前":
+      return "ご飯";
+    case "甘味の前":
+      return "甘味";
+    default:
+      // 万が一不明な値が来たときの保険
+      return "ご飯";
+  }
+}
+
+// INDEX_DATA.extras から EXTRA_BADGES_MAP を作る
+// EXTRA_BADGES_MAP[部屋名][コース名] = ["あわび×2", "牛ステーキ×1", ...]
+function buildExtraBadgesMap(indexData) {
+  EXTRA_BADGES_MAP = {};
+
+  if (!indexData || !Array.isArray(indexData.extras)) return;
+
+  indexData.extras.forEach((ex) => {
+    const name = (ex && ex.name) || "";
+    if (!name) return;
+
+    // 表示用の数量（カスタム入力があればそれを優先）
+    let qtyDisplay = "";
+    if (ex.qty === "custom") {
+      qtyDisplay = (ex.qtyCustom || "").trim();
+    } else if (ex.qty) {
+      qtyDisplay = String(ex.qty);
+    }
+
+    const badgeText = qtyDisplay ? `${name}×${qtyDisplay}` : name;
+
+    const courseLabel = mapPositionToCourseLabel(ex.position || "");
+
+    // 対象部屋
+    let targets = [];
+    if (Array.isArray(ex.targetRooms) && ex.targetRooms.length > 0) {
+      targets = ex.targetRooms;
+    } else {
+      // targetRooms が空なら「全ての部屋」に適用
+      targets = ROOM_ORDER.slice();
+    }
+
+    targets.forEach((roomName) => {
+      if (!EXTRA_BADGES_MAP[roomName]) {
+        EXTRA_BADGES_MAP[roomName] = {};
+      }
+      if (!EXTRA_BADGES_MAP[roomName][courseLabel]) {
+        EXTRA_BADGES_MAP[roomName][courseLabel] = [];
+      }
+      EXTRA_BADGES_MAP[roomName][courseLabel].push(badgeText);
+    });
+  });
+}
 
 // ここから従来どおり
 const ORDER_STORAGE_KEY = "orderSystemBoardV2";
@@ -427,6 +494,9 @@ const ORDER_STORAGE_KEY = "orderSystemBoardV2";
       "ゆり",
       "はぎ"
     ];
+
+let INDEX_DATA = null;
+let EXTRA_BADGES_MAP = {};
 
     const SIMPLE_FLOW_LABELS = new Set(["果菜盛り", "しゃぶしゃぶ"]);
 
